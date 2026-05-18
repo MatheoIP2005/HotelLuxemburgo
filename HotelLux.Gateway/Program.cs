@@ -1,0 +1,29 @@
+using HotelLux.Gateway.Swagger;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+    p.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin()));
+
+builder.Services.AddGatewaySwagger();
+
+var app = builder.Build();
+
+app.UseCors();
+
+app.MapGet("/", () => Results.Redirect("/swagger"));
+app.MapGet("/health", () => Results.Json(new
+{
+    status = "ok",
+    service = "HotelLux.Gateway",
+    documentation = "/swagger",
+    utc = DateTime.UtcNow
+}));
+
+app.UseGatewaySwaggerUi();
+app.MapReverseProxy();
+
+app.Run();

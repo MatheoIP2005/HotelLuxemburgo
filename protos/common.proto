@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package hotellux.common.v1;
+
+option csharp_namespace = "HotelLux.Protos.Common";
+
+import "google/protobuf/timestamp.proto";
+
+// ============================================================
+// Tipos comunes compartidos entre todos los .proto del sistema.
+// ============================================================
+
+// Resultado generico para operaciones que pueden fallar de forma controlada.
+message OperationResult {
+  bool   success     = 1;
+  string mensaje     = 2;   // mensaje legible (en español)
+  string codigo_error = 3;  // codigo interno opcional para mapear en cliente
+}
+
+// Identificador de un rango de fechas (usado en disponibilidad y reservas).
+message DateRange {
+  google.protobuf.Timestamp fecha_inicio = 1;
+  google.protobuf.Timestamp fecha_fin    = 2;
+}
+
+// Identificador de usuario / sesion para trazabilidad.
+message CallerContext {
+  string usuario_guid     = 1;
+  string usuario_ejecutor = 2;   // username
+  string ip_origen        = 3;
+  string servicio_origen  = 4;   // ej "reservation-service"
+}

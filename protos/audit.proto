@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package hotellux.audit.v1;
+
+option csharp_namespace = "HotelLux.Protos.Audit";
+
+import "google/protobuf/empty.proto";
+
+// ============================================================
+// Audit Service — contrato gRPC (fire-and-forget)
+//
+// CONSUMIDO POR TODOS los demas microservicios tras cada
+// operacion CRUD relevante. La respuesta es Empty: el servicio
+// no espera confirmacion; si el audit-service esta caido, se
+// pierde el evento, pero el flujo de negocio NO se bloquea.
+// ============================================================
+
+service AuditService {
+
+  rpc EmitAuditEvent (EmitAuditEventRequest) returns (google.protobuf.Empty);
+}
+
+message EmitAuditEventRequest {
+  // Datos basicos del evento
+  string servicio_origen   = 1;   // ej "reservation-service"
+  string tabla_afectada    = 2;   // ej "reservas.reserva"
+  string operacion         = 3;   // INSERT | UPDATE | DELETE
+  string entidad_guid      = 4;   // GUID del registro afectado
+  string id_registro       = 5;   // ID INT del registro (opcional)
+
+  // Datos del usuario que ejecuto la accion
+  string usuario_guid      = 6;
+  string usuario_ejecutor  = 7;   // username
+  string ip_origen         = 8;
+
+  // Payload del cambio (JSON serializado)
+  string datos_anteriores_json = 9;   // vacio en INSERT
+  string datos_nuevos_json     = 10;  // vacio en DELETE
+
+  // Marca temporal opcional. Si vacio, audit-service usa now().
+  string fecha_evento_iso  = 11;
+}

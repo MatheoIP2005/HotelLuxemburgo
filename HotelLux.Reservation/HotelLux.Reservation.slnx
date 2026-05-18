@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="HotelLux.Reservation.DataAccess\HotelLux.Reservation.DataAccess.csproj" />
+  <Project Path="HotelLux.Reservation.DataManagement\HotelLux.Reservation.DataManagement.csproj" />
+  <Project Path="HotelLux.Reservation.Business\HotelLux.Reservation.Business.csproj" />
+  <Project Path="HotelLux.Reservation.API\HotelLux.Reservation.API.csproj" />
+</Solution>

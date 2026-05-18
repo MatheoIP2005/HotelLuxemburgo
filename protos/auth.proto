@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package hotellux.auth.v1;
+
+option csharp_namespace = "HotelLux.Protos.Auth";
+
+// ============================================================
+// Auth Service — contrato gRPC
+//
+// Consumido por TODOS los demas microservicios para validar
+// JWTs entrantes en endpoints /internal/**.
+//
+// IMPORTANTE: cachear ValidateToken con TTL = vida del token.
+// ============================================================
+
+service AuthService {
+
+  // Valida la firma y expiracion de un JWT emitido por auth-service.
+  // Si es valido, retorna el user_guid y los roles del usuario.
+  rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // Retorna los roles activos de un usuario por GUID.
+  // Usado para RBAC granular cuando el JWT no incluye roles.
+  rpc GetUserRoles (GetUserRolesRequest) returns (GetUserRolesResponse);
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  bool   valid        = 1;
+  string user_guid    = 2;
+  string username     = 3;
+  string cliente_guid = 4;   // null/vacio para usuarios internos (admin/staff)
+  repeated string roles = 5;
+  int64  expira_en_unix = 6; // expiracion en epoch UTC
+  string mensaje_error = 7;  // si valid=false
+}
+
+message GetUserRolesRequest {
+  string user_guid = 1;
+}
+
+message GetUserRolesResponse {
+  repeated string roles = 1;
+}

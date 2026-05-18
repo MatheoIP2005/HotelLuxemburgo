@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package hotellux.finance.v1;
+
+option csharp_namespace = "HotelLux.Protos.Finance";
+
+// ============================================================
+// Finance Service — contrato gRPC
+//
+// Finance = billing + payment fusionados.
+//
+// Operaciones internas (NO expuestas como REST):
+//   - GenerateReservationInvoice : llamado por reservation tras confirmar reserva
+//   - GenerateFinalInvoice       : llamado por stay al hacer check-out
+//   - UpdateInvoiceBalance       : ahora local (mismo MS), pero se expone gRPC
+//   - MarkInvoicePaid            : ahora local, expuesto gRPC para integracion
+// ============================================================
+
+service FinanceService {
+
+  rpc GenerateReservationInvoice (GenerateReservationInvoiceRequest) returns (GenerateInvoiceResponse);
+  rpc GenerateFinalInvoice       (GenerateFinalInvoiceRequest)       returns (GenerateInvoiceResponse);
+  rpc UpdateInvoiceBalance       (UpdateInvoiceBalanceRequest)       returns (UpdateInvoiceBalanceResponse);
+  rpc MarkInvoicePaid            (MarkInvoicePaidRequest)            returns (MarkInvoicePaidResponse);
+}
+
+// ------------------------------------------------------------
+// GenerateReservationInvoice
+// Llamado por reservation tras estado CON.
+// ------------------------------------------------------------
+message InvoiceLineItem {
+  string tipo_item        = 1;   // ALOJAMIENTO | SERVICIO | DESCUENTO | AJUSTE
+  string referencia_tipo  = 2;   // RESERVA_HABITACION | CARGO_ESTADIA
+  string referencia_guid  = 3;
+  string descripcion      = 4;
+  int32  cantidad         = 5;
+  double precio_unitario  = 6;
+  double subtotal         = 7;
+  double valor_iva        = 8;
+  double descuento        = 9;
+  double total            = 10;
+}
+
+message GenerateReservationInvoiceRequest {
+  string reserva_guid  = 1;
+  string cliente_guid  = 2;
+  string sucursal_guid = 3;
+  repeated InvoiceLineItem items = 4;
+  string creado_por_usuario = 5;
+}
+
+message GenerateInvoiceResponse {
+  bool   success      = 1;
+  string factura_guid = 2;
+  string numero_factura = 3;
+  double total          = 4;
+  string mensaje        = 5;
+}
+
+// ------------------------------------------------------------
+// GenerateFinalInvoice
+// Llamado por stay al hacer check-out.
+// ------------------------------------------------------------
+message GenerateFinalInvoiceRequest {
+  string reserva_guid  = 1;
+  string estadia_guid  = 2;
+  string cliente_guid  = 3;
+  string sucursal_guid = 4;
+  repeated InvoiceLineItem items = 5;
+  string creado_por_usuario = 6;
+}
+
+// ------------------------------------------------------------
+// UpdateInvoiceBalance
+// ------------------------------------------------------------
+message UpdateInvoiceBalanceRequest {
+  string factura_guid = 1;
+  double monto_pagado = 2;
+}
+
+message UpdateInvoiceBalanceResponse {
+  bool   success         = 1;
+  double saldo_pendiente = 2;
+  string mensaje         = 3;
+}
+
+// ------------------------------------------------------------
+// MarkInvoicePaid
+// ------------------------------------------------------------
+message MarkInvoicePaidRequest {
+  string factura_guid = 1;
+}
+
+message MarkInvoicePaidResponse {
+  bool   success = 1;
+  string mensaje = 2;
+}

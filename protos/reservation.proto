@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package hotellux.reservation.v1;
+
+option csharp_namespace = "HotelLux.Protos.Reservation";
+
+// ============================================================
+// Reservation Service — contrato gRPC
+//
+// Operaciones internas para que stay valide antes de check-in
+// y consulte info basica de una reserva sin tener que llamar REST.
+// ============================================================
+
+service ReservationService {
+
+  rpc GetReservation              (GetReservationRequest)              returns (GetReservationResponse);
+  rpc ValidateReservationForCheckin (ValidateReservationForCheckinRequest) returns (ValidateReservationForCheckinResponse);
+}
+
+// ------------------------------------------------------------
+// GetReservation
+// ------------------------------------------------------------
+message GetReservationRequest {
+  string reserva_guid = 1;
+}
+
+message GetReservationResponse {
+  bool   encontrada      = 1;
+  string reserva_guid    = 2;
+  string codigo_reserva  = 3;
+  string cliente_guid    = 4;
+  string sucursal_guid   = 5;
+  string estado          = 6;     // PEN | CON | CAN | EXP | FIN | EMI
+  double total_reserva   = 7;
+  double saldo_pendiente = 8;
+  string fecha_inicio    = 9;     // ISO-8601
+  string fecha_fin       = 10;    // ISO-8601
+  repeated string habitacion_guids = 11;
+}
+
+// ------------------------------------------------------------
+// ValidateReservationForCheckin
+// stay-service la llama antes de generar la estadia.
+// ------------------------------------------------------------
+message ValidateReservationForCheckinRequest {
+  string reserva_guid = 1;
+}
+
+message ValidateReservationForCheckinResponse {
+  bool   valid           = 1;
+  string mensaje         = 2;
+  string cliente_guid    = 3;
+  string sucursal_guid   = 4;
+  repeated ReservaHabitacionLite habitaciones = 5;
+}
+
+message ReservaHabitacionLite {
+  string reserva_habitacion_guid = 1;
+  string habitacion_guid         = 2;
+  string fecha_inicio            = 3;   // ISO-8601
+  string fecha_fin               = 4;   // ISO-8601
+}

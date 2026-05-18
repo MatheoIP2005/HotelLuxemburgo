@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="HotelLux.Gateway/HotelLux.Gateway.csproj" />
+  <Project Path="HotelLux.Auth/HotelLux.Auth.API/HotelLux.Auth.API.csproj" />
+  <Project Path="HotelLux.Accommodation/HotelLux.Accommodation.API/HotelLux.Accommodation.API.csproj" />
+  <Project Path="HotelLux.Reservation/HotelLux.Reservation.API/HotelLux.Reservation.API.csproj" />
+  <Project Path="HotelLux.Stay/HotelLux.Stay.API/HotelLux.Stay.API.csproj" />
+</Solution>

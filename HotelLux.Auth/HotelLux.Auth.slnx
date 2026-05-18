@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="HotelLux.Auth.API/HotelLux.Auth.API.csproj" />
+  <Project Path="HotelLux.Auth.Business/HotelLux.Auth.Business.csproj" />
+  <Project Path="HotelLux.Auth.DataAccess/HotelLux.Auth.DataAccess.csproj" />
+  <Project Path="HotelLux.Auth.DataManagement/HotelLux.Auth.DataManagement.csproj" />
+</Solution>

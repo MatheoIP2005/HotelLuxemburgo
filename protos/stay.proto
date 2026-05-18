@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package hotellux.stay.v1;
+
+option csharp_namespace = "HotelLux.Protos.Stay";
+
+// ============================================================
+// Stay Service — contrato gRPC
+//
+// Stay incluye Hospedaje + Valoraciones (fusion stay+rating).
+//
+// Operaciones internas:
+//   - ValidateStayCompleted     : usado en logica interna de valoracion
+//   - GetStayStatus             : usado por finance al generar factura final
+//   - GetReviewsBySucursal      : usado por accommodation para
+//                                 GET /accommodations/{guid}/reviews (proxy)
+//   - GetRatingSummary          : usado por accommodation para
+//                                 GET /sucursales/{guid}/resumen-rating
+//   - GetValoracionesByCliente  : usado por reservation para
+//                                 GET /clientes/{guid}/valoraciones
+// ============================================================
+
+service StayService {
+
+  rpc ValidateStayCompleted     (ValidateStayCompletedRequest)     returns (ValidateStayCompletedResponse);
+  rpc GetStayStatus             (GetStayStatusRequest)             returns (GetStayStatusResponse);
+  rpc GetReviewsBySucursal      (GetReviewsBySucursalRequest)      returns (GetReviewsBySucursalResponse);
+  rpc GetRatingSummary          (GetRatingSummaryRequest)          returns (GetRatingSummaryResponse);
+  rpc GetValoracionesByCliente  (GetValoracionesByClienteRequest)  returns (GetValoracionesByClienteResponse);
+}
+
+// ------------------------------------------------------------
+// ValidateStayCompleted
+// ------------------------------------------------------------
+message ValidateStayCompletedRequest {
+  string estadia_guid = 1;
+}
+
+message ValidateStayCompletedResponse {
+  bool   completed    = 1;
+  string reserva_guid = 2;
+  string cliente_guid = 3;
+}
+
+// ------------------------------------------------------------
+// GetStayStatus
+// ------------------------------------------------------------
+message GetStayStatusRequest {
+  string estadia_guid = 1;
+}
+
+message GetStayStatusResponse {
+  bool   encontrada      = 1;
+  string estado          = 2;   // ACT | FIN | CAN
+  string cliente_guid    = 3;
+  string habitacion_guid = 4;
+  string checkin_utc     = 5;   // ISO-8601, vacio si no aplica
+  string checkout_utc    = 6;   // ISO-8601, vacio si no aplica
+}
+
+// ------------------------------------------------------------
+// GetReviewsBySucursal
+// ------------------------------------------------------------
+message GetReviewsBySucursalRequest {
+  string sucursal_guid = 1;
+  int32  page          = 2;   // 1-based
+  int32  page_size     = 3;
+}
+
+message ReviewItem {
+  string valoracion_guid     = 1;
+  string cliente_guid        = 2;
+  double puntuacion_general  = 3;
+  string comentario_positivo = 4;
+  string comentario_negativo = 5;
+  string tipo_viaje          = 6;
+  string fecha_publicacion   = 7;   // ISO-8601
+  string respuesta_hotel     = 8;
+  string nombre_visible_cliente = 9;
+}
+
+message GetReviewsBySucursalResponse {
+  repeated ReviewItem reviews = 1;
+  int32 total_paginas = 2;
+  int32 total_items   = 3;
+}
+
+// ------------------------------------------------------------
+// GetRatingSummary  (promedios para detalle publico)
+// ------------------------------------------------------------
+message GetRatingSummaryRequest {
+  string sucursal_guid = 1;
+}
+
+message GetRatingSummaryResponse {
+  bool   tiene_resenas      = 1;
+  double promedio_general   = 2;
+  double promedio_limpieza  = 3;
+  double promedio_confort   = 4;
+  double promedio_ubicacion = 5;
+  double promedio_instalaciones = 6;
+  double promedio_personal       = 7;
+  double promedio_calidad_precio = 8;
+  int32  total_resenas      = 9;
+}
+
+// ------------------------------------------------------------
+// GetValoracionesByCliente
+// ------------------------------------------------------------
+message GetValoracionesByClienteRequest {
+  string cliente_guid = 1;
+}
+
+message GetValoracionesByClienteResponse {
+  repeated ReviewItem valoraciones = 1;
+}

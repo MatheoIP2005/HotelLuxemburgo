@@ -1,0 +1,62 @@
+# ============================================================
+# Hotel Luxemburgo - mono-repo de microservicios
+# ============================================================
+
+# .NET build outputs
+bin/
+obj/
+out/
+*.dll
+*.exe
+*.pdb
+*.cache
+*.lock.json
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.pidb
+
+# Logs
+*.log
+logs/
+
+# Secrets / env
+appsettings.Local.json
+appsettings.Development.local.json
+.env
+.env.local
+*.pfx
+*.key
+secrets.json
+
+# Tests
+TestResults/
+coverage*
+*.coverage
+*.coveragexml
+
+# Node (por si entra el frontend al mismo repo)
+node_modules/
+dist/
+.next/
+
+# Rider
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backups
+*.bak
+*.orig
+*.tmp

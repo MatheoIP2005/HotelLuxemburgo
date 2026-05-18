@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package hotellux.accommodation.v1;
+
+option csharp_namespace = "HotelLux.Protos.Accommodation";
+
+import "google/protobuf/timestamp.proto";
+
+// ============================================================
+// Accommodation Service — contrato gRPC
+//
+// Operaciones que solo ejecutan otros microservicios:
+//   - CheckAvailability        : usado por reservation antes de crear reserva
+//   - ConfirmRoomLock          : usado por reservation al confirmar
+//   - ReleaseRoomLock          : usado por reservation al cancelar (compensacion)
+//   - UpdateRoomStatus         : usado por stay en check-in / check-out
+//   - FindAvailableRoomByType  : usado por reservation cuando el booking
+//                                envia tipoHabitacionGuid (debe resolver
+//                                una unidad fisica disponible)
+// ============================================================
+
+service AccommodationService {
+
+  rpc CheckAvailability       (CheckAvailabilityRequest)       returns (CheckAvailabilityResponse);
+  rpc ConfirmRoomLock         (ConfirmRoomLockRequest)         returns (ConfirmRoomLockResponse);
+  rpc ReleaseRoomLock         (ReleaseRoomLockRequest)         returns (ReleaseRoomLockResponse);
+  rpc UpdateRoomStatus        (UpdateRoomStatusRequest)        returns (UpdateRoomStatusResponse);
+  rpc FindAvailableRoomByType (FindAvailableRoomByTypeRequest) returns (FindAvailableRoomByTypeResponse);
+}
+
+// ------------------------------------------------------------
+// CheckAvailability
+// ------------------------------------------------------------
+message CheckAvailabilityRequest {
+  string sucursal_guid     = 1;
+  google.protobuf.Timestamp fecha_entrada = 2;
+  google.protobuf.Timestamp fecha_salida  = 3;
+  int32  cantidad_personas = 4;
+  string tipo_habitacion_guid = 5;   // opcional: filtra por tipo
+}
+
+message HabitacionDisponible {
+  string habitacion_guid       = 1;
+  string tipo_habitacion_guid  = 2;
+  string numero_habitacion     = 3;
+  int32  capacidad             = 4;
+  double precio_noche          = 5;
+}
+
+message CheckAvailabilityResponse {
+  bool   disponible = 1;
+  repeated HabitacionDisponible habitaciones = 2;
+}
+
+// ------------------------------------------------------------
+// ConfirmRoomLock  (cambia habitacion a estado reservado)
+// ------------------------------------------------------------
+message ConfirmRoomLockRequest {
+  string habitacion_guid = 1;
+  string reserva_guid    = 2;
+  google.protobuf.Timestamp fecha_entrada = 3;
+  google.protobuf.Timestamp fecha_salida  = 4;
+}
+
+message ConfirmRoomLockResponse {
+  bool   success = 1;
+  string mensaje = 2;
+}
+
+// ------------------------------------------------------------
+// ReleaseRoomLock  (compensacion al cancelar reserva)
+// ------------------------------------------------------------
+message ReleaseRoomLockRequest {
+  string habitacion_guid = 1;
+  string reserva_guid    = 2;
+}
+
+message ReleaseRoomLockResponse {
+  bool   success = 1;
+  string mensaje = 2;
+}
+
+// ------------------------------------------------------------
+// UpdateRoomStatus  (DIS | OCU | MNT | FDS | INA)
+// ------------------------------------------------------------
+message UpdateRoomStatusRequest {
+  string habitacion_guid = 1;
+  string nuevo_estado    = 2;   // DIS / OCU / MNT / FDS / INA
+  string operacion_guid  = 3;   // ej reserva_guid o estadia_guid que origino el cambio
+}
+
+message UpdateRoomStatusResponse {
+  bool   success = 1;
+  string mensaje = 2;
+}
+
+// ------------------------------------------------------------
+// FindAvailableRoomByType
+// Resuelve qué habitacion fisica asignar dado un tipo y rango.
+// Usado cuando el booking envia tipoHabitacionGuid (POST publico).
+// ------------------------------------------------------------
+message FindAvailableRoomByTypeRequest {
+  string sucursal_guid        = 1;
+  string tipo_habitacion_guid = 2;
+  google.protobuf.Timestamp fecha_inicio = 3;
+  google.protobuf.Timestamp fecha_fin    = 4;
+}
+
+message FindAvailableRoomByTypeResponse {
+  bool   encontrada       = 1;
+  string habitacion_guid  = 2;
+  double precio_noche     = 3;
+  string tarifa_guid      = 4;
+  string mensaje          = 5;
+}
