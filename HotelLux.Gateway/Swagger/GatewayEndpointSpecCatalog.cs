@@ -38,10 +38,9 @@ public sealed class GatewayEndpointSpecCatalog
 
     public bool TryGetSpec(string method, string path, out SpecEntry entry)
     {
-        var normalizedPath = NormalizePath(path);
         entry = _entries.FirstOrDefault(e =>
             e.Method.Equals(method, StringComparison.OrdinalIgnoreCase)
-            && PathMatches(e.Path, normalizedPath))!;
+            && PathMatches(e.Path, path))!;
 
         return entry is not null;
     }
@@ -94,8 +93,19 @@ public sealed class GatewayEndpointSpecCatalog
 
             if (line.StartsWith("/api/v1/", StringComparison.OrdinalIgnoreCase) && pendingMethod is not null)
             {
+                string? summary = null;
+                if (i + 1 < lines.Length)
+                {
+                    var next = lines[i + 1].Trim();
+                    if (IsLocalesSummaryLine(next))
+                    {
+                        summary = next;
+                        i++;
+                    }
+                }
+
                 RegisterTag(section);
-                AddEntry(pendingMethod, line, section, "locales");
+                AddEntry(pendingMethod, line, section, "locales", summary);
                 pendingMethod = null;
                 continue;
             }
@@ -107,6 +117,12 @@ public sealed class GatewayEndpointSpecCatalog
             }
         }
     }
+
+    private static bool IsLocalesSummaryLine(string line) =>
+        !string.IsNullOrWhiteSpace(line)
+        && !HttpMethods.Contains(line, StringComparer.OrdinalIgnoreCase)
+        && !line.StartsWith("/api/v1/", StringComparison.OrdinalIgnoreCase)
+        && line != "Schemas";
 
     /// <summary>
     /// Tags para rutas de endpoints_publicas.txt usando nombres de sección de endpoints_locales.txt.
@@ -145,20 +161,20 @@ public sealed class GatewayEndpointSpecCatalog
         return order;
     }
 
-    private void AddEntry(string method, string path, string tag, string source)
+    private void AddEntry(string method, string path, string tag, string source, string? summary = null)
     {
-        var normalized = NormalizePath(path);
+        var canonicalPath = CanonicalizePath(path);
 
         if (source == "locales"
             && _entries.Any(e => e.Source == "publicas"
                 && e.Method == method
-                && PathMatches(e.Path, normalized)))
+                && PathMatches(e.Path, canonicalPath)))
             return;
 
-        if (_entries.Any(e => e.Method == method && PathMatches(e.Path, normalized)))
+        if (_entries.Any(e => e.Method == method && PathMatches(e.Path, canonicalPath)))
             return;
 
-        _entries.Add(new SpecEntry(method, normalized, tag, source));
+        _entries.Add(new SpecEntry(method, canonicalPath, tag, source, summary));
     }
 
     private void RegisterTag(string sectionName)
@@ -198,13 +214,19 @@ public sealed class GatewayEndpointSpecCatalog
             $"No se encontró {fileName}. Debe estar en docs/ o en la raíz del repositorio.");
     }
 
-    private static string NormalizePath(string path)
+    /// <summary>Ruta canónica con nombres de parámetro reales (para OpenAPI/Swagger UI).</summary>
+    private static string CanonicalizePath(string path)
     {
         path = path.Trim().TrimEnd('/');
         if (!path.StartsWith('/'))
             path = "/" + path;
+        return path;
+    }
 
-        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+    /// <summary>Clave de comparación: segmentos dinámicos normalizados a <c>{}</c>.</summary>
+    private static string NormalizePathForMatch(string path)
+    {
+        var segments = CanonicalizePath(path).Split('/', StringSplitOptions.RemoveEmptyEntries);
         for (var i = 0; i < segments.Length; i++)
         {
             if (segments[i].StartsWith('{') && segments[i].EndsWith('}'))
@@ -215,9 +237,9 @@ public sealed class GatewayEndpointSpecCatalog
     }
 
     private static bool PathMatches(string pattern, string actual) =>
-        string.Equals(NormalizePath(pattern), actual, StringComparison.OrdinalIgnoreCase);
+        string.Equals(NormalizePathForMatch(pattern), NormalizePathForMatch(actual), StringComparison.OrdinalIgnoreCase);
 
-    public sealed record SpecEntry(string Method, string Path, string Tag, string Source);
+    public sealed record SpecEntry(string Method, string Path, string Tag, string Source, string? Summary = null);
 
     public sealed record TagInfo(string Name, int Order, string Description);
 }

@@ -12,11 +12,6 @@ public static class GatewayPublicasOpenApiBuilder
         GatewayEndpointSpecCatalog.SpecEntry entry,
         GatewayPublicasDocCatalog.PublicOperationDoc? doc)
     {
-        operation["summary"] = $"{entry.Method} {entry.Path}";
-        operation["description"] =
-            "Endpoint público documentado en `docs/endpoints_publicas.txt`. " +
-            "Disponible en el Gateway; levantá Accommodation/Reservation para esquemas enriquecidos desde el servicio.";
-
         if (doc is not null)
         {
             if (doc.Parameters.Count > 0)
@@ -34,6 +29,8 @@ public static class GatewayPublicasOpenApiBuilder
                 ["200"] = new JsonObject { ["description"] = "OK" }
             };
         }
+
+        GatewayOpenApiOperationCleaner.StripDocumentation(operation);
     }
 
     private static JsonArray BuildParameters(IReadOnlyList<GatewayPublicasDocCatalog.PublicParameterDoc> parameters)
@@ -50,7 +47,6 @@ public static class GatewayPublicasOpenApiBuilder
                 ["name"] = p.Name,
                 ["in"] = p.In,
                 ["required"] = p.Required,
-                ["description"] = p.Description ?? "",
                 ["schema"] = schema
             });
         }

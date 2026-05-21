@@ -36,7 +36,7 @@ public class ExceptionMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error no controlado");
-            await WriteJson(context, 500, "Error interno del servidor", new[] { ex.Message });
+            await WriteJson(context, 500, "Error interno del servidor", Array.Empty<string>());
         }
     }
 

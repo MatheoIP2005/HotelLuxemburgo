@@ -36,7 +36,7 @@ public sealed class GatewayOpenApiMerger
 
     public async Task<string> GetMergedJsonAsync(CancellationToken cancellationToken = default)
     {
-        return await _cache.GetOrCreateAsync("gateway.merged.openapi.v10", async entry =>
+        return await _cache.GetOrCreateAsync("gateway.merged.openapi.v12", async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
             return await BuildMergedJsonAsync(cancellationToken);
@@ -178,6 +178,7 @@ public sealed class GatewayOpenApiMerger
 
                 var clone = operation.DeepClone() as JsonObject ?? new JsonObject();
                 RewriteSchemaRefs(clone, prefix);
+                GatewayOpenApiOperationCleaner.StripDocumentation(clone);
 
                 if (clone["operationId"] is JsonValue opIdVal
                     && opIdVal.TryGetValue<string>(out var opId)
@@ -233,16 +234,13 @@ public sealed class GatewayOpenApiMerger
             }
             else
             {
-                operation["summary"] = $"{entry.Method} {catalogPath}";
-                operation["description"] =
-                    "Definido en el catálogo (`docs/endpoints_locales.txt`). " +
-                    "Levantá el microservicio para cargar request/response completos.";
                 operation["responses"] = new JsonObject
                 {
-                    ["default"] = new JsonObject { ["description"] = "Respuesta del microservicio" }
+                    ["default"] = new JsonObject { ["description"] = "OK" }
                 };
             }
 
+            GatewayOpenApiOperationCleaner.StripDocumentation(operation);
             ApplySecurity(operation, method, catalogPath, entry);
 
             var item = paths[catalogPath] as JsonObject ?? new JsonObject();
@@ -265,29 +263,37 @@ public sealed class GatewayOpenApiMerger
             return;
         }
 
-        if (specEntry.Source != "publicas")
-            return;
-
-        var anonymousMarketplace =
-            (method == "get" && path.Equals("/api/v1/accommodations/search", StringComparison.OrdinalIgnoreCase))
-            || (method == "get" && path.Equals("/api/v1/accommodations/{sucursalGuid}", StringComparison.OrdinalIgnoreCase))
-            || (method == "get" && path.Equals("/api/v1/accommodations/{sucursalGuid}/reviews", StringComparison.OrdinalIgnoreCase))
-            || (method == "post" && path.Equals("/api/v1/accommodations/reservas", StringComparison.OrdinalIgnoreCase));
-
-        if (anonymousMarketplace)
+        if (IsAnonymousPublicEndpoint(method, path))
         {
             operation["security"] = new JsonArray();
             return;
         }
 
-        if (method == "get"
-            && path.Equals("/api/v1/accommodations/reservas/{reservaGuid}", StringComparison.OrdinalIgnoreCase))
+        operation["security"] = new JsonArray
         {
-            operation["security"] = new JsonArray
-            {
-                new JsonObject { ["Bearer"] = new JsonArray() }
-            };
-        }
+            new JsonObject { ["Bearer"] = new JsonArray() }
+        };
+    }
+
+    private static bool IsAnonymousPublicEndpoint(string method, string path)
+    {
+        if (method == "get" && path.Equals("/api/v1/accommodations/search", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (method == "get" && path.Equals("/api/v1/accommodations/{sucursalGuid}", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (method == "get" && path.Equals("/api/v1/accommodations/{sucursalGuid}/reviews", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (method == "get" && path.Equals("/api/v1/accommodations/categories", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (method == "post" && path.Equals("/api/v1/accommodations/reservas", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (method == "post" && path.Equals("/api/v1/public/reservas", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (method == "get"
+            && path.Equals("/api/v1/public/sucursales/{sucursalGuid}/habitaciones", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
     }
 
     private static void MergeSchemas(
@@ -342,6 +348,11 @@ public sealed class GatewayOpenApiMerger
 
     private string GetGatewayServerUrl()
     {
+        // En producción usar la URL pública configurada como variable de entorno
+        var publicUrl = _config["Gateway__PublicUrl"];
+        if (!string.IsNullOrWhiteSpace(publicUrl))
+            return publicUrl.TrimEnd('/');
+
         var kestrel = _config["Kestrel:Endpoints:Http:Url"];
         if (!string.IsNullOrWhiteSpace(kestrel))
             return kestrel.Replace("0.0.0.0", "127.0.0.1").TrimEnd('/');
