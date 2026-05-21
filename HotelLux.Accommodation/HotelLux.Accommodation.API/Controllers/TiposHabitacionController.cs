@@ -40,7 +40,7 @@ public class TiposHabitacionController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Crear([FromBody] TipoHabitacionCreateDTO dto, CancellationToken ct)
     {
         dto.CreadoPorUsuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -50,7 +50,7 @@ public class TiposHabitacionController : ControllerBase
     }
 
     [HttpPut("{tipoHabitacionGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Actualizar(Guid tipoHabitacionGuid, [FromBody] TipoHabitacionUpdateDTO dto, CancellationToken ct)
     {
         dto.ModificadoPorUsuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -60,7 +60,7 @@ public class TiposHabitacionController : ControllerBase
     }
 
     [HttpPatch("{tipoHabitacionGuid:guid}/inhabilitar")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Inhabilitar(Guid tipoHabitacionGuid, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -69,7 +69,7 @@ public class TiposHabitacionController : ControllerBase
     }
 
     [HttpDelete("{tipoHabitacionGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> Eliminar(Guid tipoHabitacionGuid, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -85,7 +85,7 @@ public class TiposHabitacionController : ControllerBase
     }
 
     [HttpPost("{tipoHabitacionGuid:guid}/catalogo")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> AsignarCatalogo(Guid tipoHabitacionGuid, [FromBody] AsignarCatalogoRequest request, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -94,7 +94,7 @@ public class TiposHabitacionController : ControllerBase
     }
 
     [HttpDelete("{tipoHabitacionGuid:guid}/catalogo/{catalogoGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> RemoverCatalogo(Guid tipoHabitacionGuid, Guid catalogoGuid, CancellationToken ct)
     {
         await _catalogoService.RemoverAsync(tipoHabitacionGuid, catalogoGuid, ct);

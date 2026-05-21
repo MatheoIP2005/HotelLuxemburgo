@@ -41,11 +41,21 @@ builder.Services.AddCustomSwagger();
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddAuthorization();
 
-var authPort = int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var ap) ? ap : 5001;
+// Kestrel — dos listeners cleartext:
+//   * REST  (HTTP/1.1 + HTTP/2 negociable vía TLS aguas arriba) en HTTP_PORT/PORT.
+//   * gRPC  (HTTP/2 sin TLS, h2c) en GRPC_PORT.
+// gRPC requiere HTTP/2; en cleartext sin TLS Kestrel cae a HTTP/1.1 si no se fuerza Http2.
+var httpPort = int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var ap) ? ap : 5001;
+var grpcPort = int.TryParse(Environment.GetEnvironmentVariable("GRPC_PORT"), out var gp) ? gp : 5101;
 builder.WebHost.ConfigureKestrel(opts =>
 {
-    opts.ListenAnyIP(authPort, lo =>
+    opts.ListenAnyIP(httpPort, lo =>
         lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2);
+    if (grpcPort != httpPort)
+    {
+        opts.ListenAnyIP(grpcPort, lo =>
+            lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
+    }
 });
 
 var app = builder.Build();
@@ -54,6 +64,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
     await PasswordSeeder.RegenerarHashesPlaceholderAsync(db, CancellationToken.None);
+    await DevUsersSeeder.EnsureDevCredentialsAsync(db, CancellationToken.None);
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();

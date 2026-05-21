@@ -8,7 +8,7 @@ namespace HotelLux.Accommodation.API.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/internal/images")]
-[Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA")]
+[Authorize(Roles = "ADMIN,VENDEDOR")]
 public class InternalImagesController : ControllerBase
 {
     private readonly IWebHostEnvironment _env;

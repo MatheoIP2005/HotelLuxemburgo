@@ -16,4 +16,5 @@ public interface IReservaService
     Task EliminarAsync(Guid reservaGuid, string usuario, CancellationToken ct = default);
     Task<ReservaHabitacionDTO> AgregarHabitacionAsync(Guid reservaGuid, ReservaHabitacionCreateDTO dto, string usuario, CancellationToken ct = default);
     Task EliminarHabitacionAsync(Guid reservaGuid, Guid reservaHabitacionGuid, string usuario, CancellationToken ct = default);
+    Task EliminarHabitacionPorIdAsync(Guid reservaGuid, int idReservaHabitacion, string usuario, CancellationToken ct = default);
 }

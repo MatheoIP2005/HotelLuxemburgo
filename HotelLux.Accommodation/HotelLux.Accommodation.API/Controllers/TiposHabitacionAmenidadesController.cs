@@ -37,7 +37,7 @@ public class TiposHabitacionAmenidadesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Asignar(Guid tipoHabitacionGuid, [FromBody] AsignarAmenidadRequest request, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -45,11 +45,11 @@ public class TiposHabitacionAmenidadesController : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{catalogoGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
-    public async Task<IActionResult> Remover(Guid tipoHabitacionGuid, Guid catalogoGuid, CancellationToken ct)
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> Remover(Guid tipoHabitacionGuid, int id, CancellationToken ct)
     {
-        await _catalogoService.RemoverAsync(tipoHabitacionGuid, catalogoGuid, ct);
+        await _catalogoService.RemoverPorIdAsync(tipoHabitacionGuid, id, ct);
         return NoContent();
     }
 }

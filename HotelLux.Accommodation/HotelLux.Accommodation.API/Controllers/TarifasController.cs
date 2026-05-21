@@ -32,7 +32,7 @@ public class TarifasController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Crear([FromBody] TarifaCreateDTO dto, CancellationToken ct)
     {
         dto.CreadoPorUsuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -42,7 +42,7 @@ public class TarifasController : ControllerBase
     }
 
     [HttpPut("{tarifaGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Actualizar(Guid tarifaGuid, [FromBody] TarifaUpdateDTO dto, CancellationToken ct)
     {
         dto.ModificadoPorUsuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -52,7 +52,7 @@ public class TarifasController : ControllerBase
     }
 
     [HttpPatch("{tarifaGuid:guid}/desactivar")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Desactivar(Guid tarifaGuid, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -61,7 +61,7 @@ public class TarifasController : ControllerBase
     }
 
     [HttpDelete("{tarifaGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> Eliminar(Guid tarifaGuid, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";

@@ -51,13 +51,13 @@ public class HabitacionService : IHabitacionService
     }
 
     public async Task<IReadOnlyList<HabitacionDTO>> ListarDisponiblesAsync(
-        Guid sucursalGuid, DateOnly fechaEntrada, DateOnly fechaSalida, CancellationToken ct = default)
+        Guid sucursalGuid, DateOnly fechaInicio, DateOnly fechaFin, CancellationToken ct = default)
     {
         var sucursal = await _sucursalDataService.ObtenerPorGuidAsync(sucursalGuid, ct);
         if (sucursal is null || sucursal.EsEliminado || sucursal.EstadoSucursal != "ACT")
             throw new NotFoundException("Sucursal", sucursalGuid);
 
-        var models = await _dataService.ListarDisponiblesAsync(sucursalGuid, fechaEntrada, fechaSalida, ct);
+        var models = await _dataService.ListarDisponiblesAsync(sucursalGuid, fechaInicio, fechaFin, ct);
         return models.Select(HabitacionBusinessMapper.ToDTO).ToList();
     }
 

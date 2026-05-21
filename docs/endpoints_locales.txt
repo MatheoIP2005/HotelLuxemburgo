@@ -1,0 +1,1488 @@
+Accommodations
+API pública de marketplace tipo Booking. Todos los endpoints son de solo lectura (GET) y no requieren autenticación.
+GET
+/api/v1/accommodations/search
+Búsqueda paginada de propiedades publicadas en el portal con filtros de destino, fechas, capacidad, precio, categoría y orden.
+GET
+/api/v1/accommodations/{sucursalGuid}
+Detalle público de una propiedad: tipos de habitación, tarifas activas, amenidades, imágenes, política y promedio de reseñas.
+GET
+/api/v1/accommodations/{sucursalGuid}/reviews
+Reseñas publicadas y aprobadas de una propiedad, paginadas.
+GET
+/api/v1/accommodations/categories
+Tipos de alojamiento (categorías) disponibles, opcionalmente filtrados por ciudad.
+
+
+Auditoria
+Auditoría — solo lectura. Los registros se insertan automáticamente mediante triggers de base de datos.
+GET
+/api/v1/internal/auditoria
+Listar registros de auditoría (paginado, filtrable por tabla/fecha/usuario)
+GET
+/api/v1/internal/auditoria/{auditoriaGuid}
+Obtener detalle de un evento de auditoría específico
+
+
+Facturas
+Facturas — consulta + anulación + generación vía stored procedures.
+GET
+/api/v1/internal/facturas/reserva/{idReserva}
+Facturas ligadas a una reserva (uso: pagos, cierre)
+GET
+/api/v1/internal/facturas
+Listar facturas (filtrable por cliente, reserva, estado, tipo, fecha)
+GET
+/api/v1/internal/facturas/{facturaGuid}
+Detalle completo de factura con líneas de detalle
+GET
+/api/v1/internal/facturas/{facturaGuid}/detalle
+Solo las líneas de detalle de la factura
+POST
+/api/v1/internal/facturas/generar-reserva/{reservaGuid}
+Genera factura de tipo RESERVA vía SP_GENERAR_FACTURA_RESERVA — AdminOrVendedor
+POST
+/api/v1/internal/facturas/generar-final/{reservaGuid}
+Genera factura FINAL con cargos de estadía vía SP_GENERAR_FACTURA_FINAL — AdminOrVendedor
+POST
+/api/v1/internal/facturas/final-y-pago-simulado/{reservaGuid}
+Factura FINAL (SP) más pago efectivo simulado del saldo pendiente.
+PATCH
+/api/v1/internal/facturas/{facturaGuid}/anular
+Anular factura (EMI → ANU) — Solo Admin
+GET
+/api/v1/internal/facturas/{facturaGuid}/pagos
+Listar todos los pagos de una factura
+
+
+Pagos
+GET
+/api/v1/internal/pagos
+Listar pagos (filtrable por factura, reserva, estado, método, fecha)
+POST
+/api/v1/internal/pagos
+Registrar nuevo pago contra una factura — AdminOrVendedor
+GET
+/api/v1/internal/pagos/{pagoGuid}
+Detalle de un pago
+PATCH
+/api/v1/internal/pagos/{pagoGuid}/estado
+Actualizar estado del pago (PRO → APR | REC | CAN) — Solo Admin
+
+
+TiposHabitacion
+Tipos de habitación
+GET
+/api/v1/internal/tipos-habitacion
+POST
+/api/v1/internal/tipos-habitacion
+GET
+/api/v1/internal/tipos-habitacion/{tipoHabitacionGuid}
+PUT
+/api/v1/internal/tipos-habitacion/{tipoHabitacionGuid}
+DELETE
+/api/v1/internal/tipos-habitacion/{tipoHabitacionGuid}
+GET
+/api/v1/internal/tipos-habitacion/{tipoHabitacionGuid}/amenidades
+POST
+/api/v1/internal/tipos-habitacion/{tipoHabitacionGuid}/amenidades
+DELETE
+/api/v1/internal/tipos-habitacion/{tipoHabitacionGuid}/amenidades/{id}
+GET
+/api/v1/internal/tipos-habitacion/{tipoHabitacionGuid}/imagenes
+POST
+/api/v1/internal/tipos-habitacion/{tipoHabitacionGuid}/imagenes
+DELETE
+/api/v1/internal/tipos-habitacion/{tipoHabitacionGuid}/imagenes/{id}
+
+
+Habitaciones
+Habitaciones (unidades físicas)
+GET
+/api/v1/internal/habitaciones
+POST
+/api/v1/internal/habitaciones
+GET
+/api/v1/internal/habitaciones/disponibles
+GET
+/api/v1/internal/habitaciones/{habitacionGuid}
+PUT
+/api/v1/internal/habitaciones/{habitacionGuid}
+DELETE
+/api/v1/internal/habitaciones/{habitacionGuid}
+PATCH
+/api/v1/internal/habitaciones/{habitacionGuid}/estado
+Cambiar estado (DIS | OCU | MNT | FDS | INA)
+GET
+/api/v1/internal/habitaciones/disponibilidad
+
+
+HabitacionesPublic
+API publica de habitaciones (lookup) para integraciones externas como Booking y diagnostico del front publico. Lista habitaciones fisicas de una sucursal, opcionalmente filtradas por tipo y rango de fechas (con calculo de disponibilidad).
+GET
+/api/v1/public/sucursales/{sucursalGuid}/habitaciones
+Lista las habitaciones fisicas de una sucursal. Si se envia `tipoHabitacionGuid`, filtra por ese tipo. Si se envian `fechaInicio` y `fechaFin`, devuelve solo las disponibles en ese rango (sin solapamiento con reservas activas).
+
+ReservasPublic
+API publica de reservas para el marketplace. Permite a un huesped anonimo crear y confirmar una reserva en una unica llamada usando GUIDs (sin exponer IDs internos).
+POST
+/api/v1/public/reservas
+Crea una reserva publica: registra al huesped como cliente, crea la reserva en estado PEN y la confirma a CON. Devuelve la reserva publica sin campos de auditoria ni IDs internos.
+
+
+Roles
+Gestión de roles y permisos
+GET
+/api/v1/internal/roles
+POST
+/api/v1/internal/roles
+PUT
+/api/v1/internal/roles/{rolGuid}
+DELETE
+/api/v1/internal/roles/{rolGuid}
+POST
+/api/v1/internal/roles/{rolGuid}/permisos
+DELETE
+/api/v1/internal/roles/{rolGuid}/permisos/{idPermiso}
+
+
+Auth
+POST
+/api/v1/auth/login
+POST
+/api/v1/auth/refresh
+POST
+/api/v1/auth/logout
+POST
+/api/v1/auth/cambiar-password
+
+
+CargosEstadia
+GET
+/api/v1/internal/cargos-estadia/{cargoGuid}
+PATCH
+/api/v1/internal/cargos-estadia/{cargoGuid}/anular
+
+
+CatalogoServicios
+GET
+/api/v1/internal/catalogo-servicios
+POST
+/api/v1/internal/catalogo-servicios
+GET
+/api/v1/internal/catalogo-servicios/{catalogoGuid}
+PUT
+/api/v1/internal/catalogo-servicios/{catalogoGuid}
+DELETE
+/api/v1/internal/catalogo-servicios/{catalogoGuid}
+PATCH
+/api/v1/internal/catalogo-servicios/{catalogoGuid}/desactivar
+
+
+Clientes
+GET
+/api/v1/internal/clientes
+Listar clientes (paginado, filtrable)
+POST
+/api/v1/internal/clientes
+Crear nuevo cliente
+GET
+/api/v1/internal/clientes/{clienteGuid}
+Detalle de un cliente por GUID
+PUT
+/api/v1/internal/clientes/{clienteGuid}
+Actualizar datos del cliente
+DELETE
+/api/v1/internal/clientes/{clienteGuid}
+Eliminación lógica del cliente — Solo Admin
+PATCH
+/api/v1/internal/clientes/{clienteGuid}/inhabilitar
+Inhabilitar cliente (borrado lógico) — Admin y Vendedor
+GET
+/api/v1/internal/clientes/{clienteGuid}/reservas
+GET
+/api/v1/internal/clientes/{clienteGuid}/valoraciones
+
+
+Estadias
+GET
+/api/v1/internal/estadias
+Listar estadías (filtrable por estado, habitación, fechas, sucursal)
+GET
+/api/v1/internal/estadias/{estadiaGuid}
+Detalle de una estadía
+POST
+/api/v1/internal/estadias/checkin/{reservaGuid}
+Check-in de una reserva confirmada — genera estadía
+PATCH
+/api/v1/internal/estadias/{estadiaGuid}/checkout
+Checkout — marca estadía como FIN y habitación como DIS
+GET
+/api/v1/internal/estadias/{estadiaGuid}/cargos
+Listar cargos de una estadía
+POST
+/api/v1/internal/estadias/{estadiaGuid}/cargos
+Registrar cargo durante la estadía
+PATCH
+/api/v1/internal/estadias/{estadiaGuid}/mantenimiento
+
+
+Images
+POST
+/api/v1/internal/images/upload
+
+
+Permisos
+GET
+/api/v1/internal/permisos
+
+Reservas
+GET
+/api/v1/internal/reservas
+Listar reservas (paginado, filtrable por estado, sucursal, fecha, cliente)
+POST
+/api/v1/internal/reservas
+Crear nueva reserva (estado inicial: PEN)
+GET
+/api/v1/internal/reservas/{reservaGuid}
+Detalle completo de una reserva
+DELETE
+/api/v1/internal/reservas/{reservaGuid}
+Eliminación lógica — Solo Admin
+PATCH
+/api/v1/internal/reservas/{reservaGuid}/confirmar
+Confirmar reserva (PEN → CON)
+PATCH
+/api/v1/internal/reservas/{reservaGuid}/cancelar
+Cancelar reserva — registra motivo
+GET
+/api/v1/internal/reservas/{reservaGuid}/habitaciones
+POST
+/api/v1/internal/reservas/{reservaGuid}/habitaciones
+DELETE
+/api/v1/internal/reservas/{reservaGuid}/habitaciones/{id}
+
+
+Sucursales
+GET
+/api/v1/internal/sucursales
+Listar sucursales (filtrable por estado, tipo, ciudad)
+POST
+/api/v1/internal/sucursales
+Crear nueva sucursal/propiedad
+GET
+/api/v1/internal/sucursales/{sucursalGuid}
+Detalle completo de una sucursal
+PUT
+/api/v1/internal/sucursales/{sucursalGuid}
+Actualizar todos los datos de la sucursal
+DELETE
+/api/v1/internal/sucursales/{sucursalGuid}
+Eliminación lógica de sucursal — Solo Admin
+PATCH
+/api/v1/internal/sucursales/{sucursalGuid}/politicas
+Actualizar solo políticas operativas
+PATCH
+/api/v1/internal/sucursales/{sucursalGuid}/inhabilitar
+Desactivar sucursal (estado INA)
+GET
+/api/v1/internal/sucursales/{sucursalGuid}/resumen-rating
+GET
+/api/v1/internal/sucursales/{sucursalGuid}/imagenes
+Listar imágenes de una sucursal
+POST
+/api/v1/internal/sucursales/{sucursalGuid}/imagenes
+Agregar imagen a una sucursal
+DELETE
+/api/v1/internal/sucursales/{sucursalGuid}/imagenes/{idSucursalImagen}
+Eliminar una imagen de sucursal
+
+
+Tarifas
+GET
+/api/v1/internal/tarifas
+POST
+/api/v1/internal/tarifas
+GET
+/api/v1/internal/tarifas/{tarifaGuid}
+PUT
+/api/v1/internal/tarifas/{tarifaGuid}
+DELETE
+/api/v1/internal/tarifas/{tarifaGuid}
+PATCH
+/api/v1/internal/tarifas/{tarifaGuid}/desactivar
+Desactivar tarifa (estado INA)
+
+
+Usuarios
+GET
+/api/v1/internal/usuarios
+Listar todos los usuarios (paginado)
+POST
+/api/v1/internal/usuarios
+Crear nuevo usuario del sistema
+GET
+/api/v1/internal/usuarios/{usuarioGuid}
+Obtener detalle de un usuario por GUID
+PUT
+/api/v1/internal/usuarios/{usuarioGuid}
+Actualizar datos del usuario
+DELETE
+/api/v1/internal/usuarios/{usuarioGuid}
+Eliminación lógica — Solo Admin
+PATCH
+/api/v1/internal/usuarios/{usuarioGuid}/inhabilitar
+Inhabilitar usuario (estado BLO)
+GET
+/api/v1/internal/usuarios/{usuarioGuid}/roles
+Listar roles asignados al usuario
+POST
+/api/v1/internal/usuarios/{usuarioGuid}/roles
+Asignar rol al usuario
+DELETE
+/api/v1/internal/usuarios/{usuarioGuid}/roles/{idRol}
+Remover rol del usuario
+
+
+Valoraciones
+GET
+/api/v1/internal/valoraciones
+Listar valoraciones (filtrable por sucursal, estado, tipo_viaje, fecha)
+POST
+/api/v1/internal/valoraciones
+Crear valoración para una estadía finalizada — Cliente puede crear
+GET
+/api/v1/internal/valoraciones/{valoracionGuid}
+Detalle de una valoración
+DELETE
+/api/v1/internal/valoraciones/{valoracionGuid}
+Eliminación lógica de la valoración — Solo Admin
+PATCH
+/api/v1/internal/valoraciones/{valoracionGuid}/moderar
+Moderar valoración (PUB | OCU | REP) — Solo Admin
+PATCH
+/api/v1/internal/valoraciones/{valoracionGuid}/responder
+Registrar respuesta oficial de la propiedad — Admin o Vendedor
+
+
+
+
+Schemas
+AccommodationAvailabilityDto{
+fechaEntrada	[...]
+fechaSalida	[...]
+porTipoHabitacion	[...]
+}
+AccommodationCategoryDto{
+idCategoria	[...]
+nombreCategoria	[...]
+totalPropiedades	[...]
+precioPromedioNoche	[...]
+moneda	[...]
+}
+AccommodationDetailResponse{
+sucursalGuid	[...]
+nombre	[...]
+ciudad	[...]
+provincia	[...]
+pais	[...]
+direccion	[...]
+descripcion	[...]
+categoria	[...]
+estrellas	[...]
+tipoAlojamiento	[...]
+precioDesde	[...]
+moneda	[...]
+imagenPrincipalUrl	[...]
+promedioValoracion	[...]
+totalValoraciones	[...]
+habitacionesDisponibles	[...]
+serviciosDestacados	[...]
+horaCheckIn	[...]
+horaCheckOut	[...]
+aceptaNinos	[...]
+permiteMascotas	[...]
+descripcionCompleta	[...]
+tiposHabitacion	[...]
+tarifasActivas	[...]
+amenities	[...]
+imagenes	[...]
+politicas	AccommodationPolicyDto{...}
+disponibilidad	AccommodationAvailabilityDto{...}
+}
+AccommodationPolicyDto{
+horaCheckIn	[...]
+horaCheckOut	[...]
+aceptaNinos	[...]
+permiteMascotas	[...]
+politicas	[...]
+}
+AccommodationReviewDto{
+valoracionGuid	[...]
+puntuacion	[...]
+comentarioPositivo	[...]
+comentarioNegativo	[...]
+tipoViaje	[...]
+fecha	[...]
+nombreVisibleCliente	[...]
+respuestaPropiedad	[...]
+}
+AccommodationReviewDtoPagedResponse{
+items	[...]
+pagina	[...]
+limite	[...]
+totalResultados	[...]
+totalPaginas	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+AccommodationRoomTypeDto{
+tipoHabitacionGuid	[...]
+nombre	[...]
+tipoCama	[...]
+capacidadAdultos	[...]
+capacidadNinos	[...]
+areaM2	[...]
+precioBase	[...]
+imagenes	[...]
+disponiblesEnRango	[...]
+}
+AccommodationSearchItemDto{
+sucursalGuid	[...]
+nombre	[...]
+ciudad	[...]
+provincia	[...]
+pais	[...]
+direccion	[...]
+descripcion	[...]
+categoria	[...]
+estrellas	[...]
+tipoAlojamiento	[...]
+precioDesde	[...]
+moneda	[...]
+imagenPrincipalUrl	[...]
+promedioValoracion	[...]
+totalValoraciones	[...]
+habitacionesDisponibles	[...]
+serviciosDestacados	[...]
+horaCheckIn	[...]
+horaCheckOut	[...]
+aceptaNinos	[...]
+permiteMascotas	[...]
+}
+AccommodationSearchItemDtoPagedResponse{
+items	[...]
+pagina	[...]
+limite	[...]
+totalResultados	[...]
+totalPaginas	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+AccommodationTariffDto{
+tarifaGuid	[...]
+nombre	[...]
+precioPorNoche	[...]
+moneda	[...]
+fechaInicio	[...]
+fechaFin	[...]
+minNoches	[...]
+tipoHabitacionGuid	[...]
+}
+ActualizarCatalogoRequest{
+idSucursal	[...]
+codigoCatalogo	[...]
+nombreCatalogo	[...]
+tipoCatalogo	[...]
+categoriaCatalogo	[...]
+descripcionCatalogo	[...]
+precioBase	[...]
+aplicaIva	[...]
+disponible24h	[...]
+horaInicio	[...]
+horaFin	[...]
+iconoUrl	[...]
+catalogoGuid	[...]
+estadoCatalogo	[...]
+creadoPorUsuario	[...]
+modificadoPorUsuario	[...]
+rowVersion	[...]
+}
+ActualizarClienteRequest{
+clienteGuid	[...]
+tipoIdentificacion	[...]
+numeroIdentificacion	[...]
+nombres	[...]
+apellidos	[...]
+razonSocial	[...]
+correo	[...]
+telefono	[...]
+direccion	[...]
+estado	[...]
+modificadoPorUsuario	[...]
+rowVersion	[...]
+}
+ActualizarHabitacionRequest{
+habitacionGuid	[...]
+idTipoHabitacion	[...]
+numeroHabitacion	[...]
+piso	[...]
+precioBase	[...]
+descripcionHabitacion	[...]
+estadoHabitacion	[...]
+modificadoPorUsuario	[...]
+rowVersion	[...]
+}
+ActualizarSucursalRequest{
+codigoSucursal	[...]
+nombreSucursal	[...]
+descripcionSucursal	[...]
+descripcionCorta	[...]
+tipoAlojamiento	[...]
+estrellas	[...]
+categoriaViaje	[...]
+pais	[...]
+provincia	[...]
+ciudad	[...]
+ubicacion	[...]
+direccion	[...]
+codigoPostal	[...]
+telefono	[...]
+correo	[...]
+latitud	[...]
+longitud	[...]
+horaCheckin	[...]
+horaCheckout	[...]
+aceptaNinos	[...]
+permiteMascotas	[...]
+sePermiteFumar	[...]
+sucursalGuid	[...]
+estadoSucursal	[...]
+creadoPorUsuario	[...]
+modificadoPorUsuario	[...]
+checkinAnticipado	[...]
+checkoutTardio	[...]
+edadMinimaHuesped	[...]
+rowVersion	[...]
+}
+ActualizarTarifaRequest{
+codigoTarifa	[...]
+idSucursal	[...]
+idTipoHabitacion	[...]
+nombreTarifa	[...]
+canalTarifa	[...]
+fechaInicio	[...]
+fechaFin	[...]
+precioPorNoche	[...]
+porcentajeIva	[...]
+minNoches	[...]
+maxNoches	[...]
+prioridad	[...]
+permitePortalPublico	[...]
+tarifaGuid	[...]
+estadoTarifa	[...]
+creadoPorUsuario	[...]
+modificadoPorUsuario	[...]
+rowVersion	[...]
+}
+ActualizarTipoHabitacionRequest{
+codigoTipoHabitacion	[...]
+nombreTipoHabitacion	[...]
+descripcion	[...]
+capacidadAdultos	[...]
+capacidadNinos	[...]
+tipoCama	[...]
+areaM2	[...]
+permiteReservaPublica	[...]
+tipoHabitacionGuid	[...]
+estadoTipoHabitacion	[...]
+creadoPorUsuario	[...]
+modificadoPorUsuario	[...]
+rowVersion	[...]
+}
+ActualizarUsuarioRequest{
+usuarioGuid	[...]
+username	[...]
+correo	[...]
+nombres	[...]
+apellidos	[...]
+estadoUsuario	[...]
+modificadoPorUsuario	[...]
+rowVersion	[...]
+}
+AgregarImagenBody{
+urlImagen	[...]
+creadoPorUsuario	[...]
+}
+AnularCargoBody{
+motivo	[...]
+rowVersion	[...]
+}
+AnularFacturaBody{
+motivo	[...]
+rowVersion	[...]
+}
+ApiErrorResponse{
+status	[...]
+message	[...]
+detail	[...]
+errors	{...}
+nullable: true
+}
+AsignarRolRequest{
+rolGuid	[...]
+}
+AssignPermisoRequest{
+idPermiso	[...]
+}
+AuditoriaResponse{
+auditoriaGuid	[...]
+tablaAfectada	[...]
+operacion	[...]
+idRegistroAfectado	[...]
+datosAnteriores	[...]
+datosNuevos	[...]
+usuarioEjecutor	[...]
+ipOrigen	[...]
+fechaEventoUtc	[...]
+}
+AuditoriaResponseApiResponse{
+data	AuditoriaResponse{...}
+success	[...]
+message	[...]
+}
+AuditoriaResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+AvailabilityByRoomTypeDto{
+tipoHabitacionGuid	[...]
+nombre	[...]
+disponibles	[...]
+}
+CambiarEstadoHabitacionRequest{
+nuevoEstado	[...]
+rowVersion	[...]
+}
+CambiarEstadoPagoBody{
+nuevoEstado	[...]
+rowVersion	[...]
+}
+CambiarPasswordRequest{
+passwordActual	[...]
+nuevaPassword	[...]
+}
+CancelarReservaBody{
+motivo	[...]
+rowVersion	[...]
+}
+CargoEstadiaRequest{
+idCatalogo	[...]
+descripcionCargo	[...]
+cantidad	[...]
+precioUnitario	[...]
+fechaConsumoUtc	[...]
+creadoPorUsuario	[...]
+}
+CargoEstadiaResponse{
+cargoGuid	[...]
+descripcionCargo	[...]
+cantidad	[...]
+precioUnitario	[...]
+totalCargo	[...]
+fechaConsumoUtc	[...]
+estadoCargo	[...]
+rowVersion	[...]
+}
+CargoEstadiaResponseApiResponse{
+data	CargoEstadiaResponse{...}
+success	[...]
+message	[...]
+}
+CargoEstadiaResponseListApiResponse{
+data	[...]
+success	[...]
+message	[...]
+}
+CatalogoResponse{
+idCatalogo	[...]
+catalogoGuid	[...]
+codigoCatalogo	[...]
+nombreCatalogo	[...]
+tipoCatalogo	[...]
+categoriaCatalogo	[...]
+descripcionCatalogo	[...]
+precioBase	[...]
+aplicaIva	[...]
+disponible24h	[...]
+iconoUrl	[...]
+estadoCatalogo	[...]
+rowVersion	[...]
+}
+CatalogoResponseApiResponse{
+data	CatalogoResponse{...}
+success	[...]
+message	[...]
+}
+CatalogoResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+CheckinRequest{
+observacionesCheckin	[...]
+}
+CheckoutRequest{
+observacionesCheckout	[...]
+requiereMantenimiento	[...]
+}
+ClientePublicRequest{
+tipoIdentificacion	[...]
+numeroIdentificacion	[...]
+nombres	[...]
+apellidos	[...]
+correo	[...]
+telefono	[...]
+direccion	[...]
+}
+ClienteResponse{
+idCliente	[...]
+clienteGuid	[...]
+tipoIdentificacion	[...]
+numeroIdentificacion	[...]
+nombres	[...]
+apellidos	[...]
+razonSocial	[...]
+correo	[...]
+telefono	[...]
+direccion	[...]
+estado	[...]
+rowVersion	[...]
+}
+ClienteResponseApiResponse{
+data	ClienteResponse{...}
+success	[...]
+message	[...]
+}
+ClienteResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+CrearCatalogoRequest{
+idSucursal	[...]
+codigoCatalogo	[...]
+nombreCatalogo	[...]
+tipoCatalogo	[...]
+categoriaCatalogo	[...]
+descripcionCatalogo	[...]
+precioBase	[...]
+aplicaIva	[...]
+disponible24h	[...]
+horaInicio	[...]
+horaFin	[...]
+iconoUrl	[...]
+creadoPorUsuario	[...]
+}
+CrearClienteRequest{
+tipoIdentificacion	[...]
+numeroIdentificacion	[...]
+nombres	[...]
+apellidos	[...]
+razonSocial	[...]
+correo	[...]
+telefono	[...]
+direccion	[...]
+creadoPorUsuario	[...]
+}
+CrearHabitacionRequest{
+idSucursal	[...]
+idTipoHabitacion	[...]
+numeroHabitacion	[...]
+piso	[...]
+precioBase	[...]
+descripcionHabitacion	[...]
+creadoPorUsuario	[...]
+}
+CrearPagoRequest{
+idFactura	[...]
+idReserva	[...]
+monto	[...]
+metodoPago	[...]
+esPagoElectronico	[...]
+proveedorPasarela	[...]
+transaccionExterna	[...]
+codigoAutorizacion	[...]
+referencia	[...]
+creadoPorUsuario	[...]
+}
+CrearReservaPublicRequest{
+sucursalGuid	[...]
+fechaInicio	[...]
+fechaFin	[...]
+origenCanalReserva	[...]
+observaciones	[...]
+cliente	ClientePublicRequest{...}
+habitaciones	[...]
+}
+CrearReservaRequest{
+idCliente	[...]
+idSucursal	[...]
+fechaInicio	[...]
+fechaFin	[...]
+origenCanalReserva	[...]
+observaciones	[...]
+esWalkin	[...]
+creadoPorUsuario	[...]
+habitaciones	[...]
+}
+CrearRolRequest{
+nombreRol	[...]
+descripcionRol	[...]
+creadoPorUsuario	[...]
+}
+CrearSucursalImagenRequest{
+urlImagen	[...]
+descripcionImagen	[...]
+tipoImagen	[...]
+ordenVisualizacion	[...]
+esPrincipal	[...]
+creadoPorUsuario	[...]
+}
+CrearSucursalRequest{
+codigoSucursal	[...]
+nombreSucursal	[...]
+descripcionSucursal	[...]
+descripcionCorta	[...]
+tipoAlojamiento	[...]
+estrellas	[...]
+categoriaViaje	[...]
+pais	[...]
+provincia	[...]
+ciudad	[...]
+ubicacion	[...]
+direccion	[...]
+codigoPostal	[...]
+telefono	[...]
+correo	[...]
+latitud	[...]
+longitud	[...]
+horaCheckin	[...]
+horaCheckout	[...]
+aceptaNinos	[...]
+permiteMascotas	[...]
+sePermiteFumar	[...]
+creadoPorUsuario	[...]
+}
+CrearTarifaRequest{
+codigoTarifa	[...]
+idSucursal	[...]
+idTipoHabitacion	[...]
+nombreTarifa	[...]
+canalTarifa	[...]
+fechaInicio	[...]
+fechaFin	[...]
+precioPorNoche	[...]
+porcentajeIva	[...]
+minNoches	[...]
+maxNoches	[...]
+prioridad	[...]
+permitePortalPublico	[...]
+creadoPorUsuario	[...]
+}
+CrearTipoHabitacionRequest{
+codigoTipoHabitacion	[...]
+nombreTipoHabitacion	[...]
+descripcion	[...]
+capacidadAdultos	[...]
+capacidadNinos	[...]
+tipoCama	[...]
+areaM2	[...]
+permiteReservaPublica	[...]
+creadoPorUsuario	[...]
+}
+CrearUsuarioRequest{
+username	[...]
+correo	[...]
+nombres	[...]
+apellidos	[...]
+password	[...]
+creadoPorUsuario	[...]
+}
+CrearValoracionRequest{
+idEstadia	[...]
+puntuacionGeneral	[...]
+puntuacionLimpieza	[...]
+puntuacionConfort	[...]
+puntuacionUbicacion	[...]
+puntuacionInstalaciones	[...]
+puntuacionPersonal	[...]
+puntuacionCalidadPrecio	[...]
+comentarioPositivo	[...]
+comentarioNegativo	[...]
+tipoViaje	[...]
+creadoPorUsuario	[...]
+}
+DeleteRequest{
+description:	
+DTO simple para eliminaciones lógicas
+
+rowVersion	[...]
+}
+EstadiaResponse{
+idEstadia	[...]
+estadiaGuid	[...]
+idReserva	[...]
+reservaGuid	[...]
+codigoReserva	[...]
+idReservaHabitacion	[...]
+idCliente	[...]
+idHabitacion	[...]
+checkinUtc	[...]
+checkoutUtc	[...]
+estadoEstadia	[...]
+observacionesCheckin	[...]
+observacionesCheckout	[...]
+requiereMantenimiento	[...]
+montoNoches	[...]
+montoCargos	[...]
+montoTotal	[...]
+rowVersion	[...]
+}
+EstadiaResponseApiResponse{
+data	EstadiaResponse{...}
+success	[...]
+message	[...]
+}
+EstadiaResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+FacturaDetalleResponse{
+facturaDetalleGuid	[...]
+tipoItem	[...]
+descripcionItem	[...]
+cantidad	[...]
+precioUnitario	[...]
+totalLinea	[...]
+}
+FacturaDetalleResponseListApiResponse{
+data	[...]
+success	[...]
+message	[...]
+}
+FacturaResponse{
+idFactura	[...]
+idReserva	[...]
+guidFactura	[...]
+numeroFactura	[...]
+tipoFactura	[...]
+fechaEmision	[...]
+subtotal	[...]
+valorIva	[...]
+total	[...]
+saldoPendiente	[...]
+moneda	[...]
+estado	[...]
+detalles	[...]
+rowVersion	[...]
+}
+FacturaResponseApiResponse{
+data	FacturaResponse{...}
+success	[...]
+message	[...]
+}
+FacturaResponseListApiResponse{
+data	[...]
+success	[...]
+message	[...]
+}
+FacturaResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+FacturaYCierreSimResponse{
+factura	FacturaResponse{...}
+pagoSimulado	PagoResponse{...}
+}
+FacturaYCierreSimResponseApiResponse{
+data	FacturaYCierreSimResponse{...}
+success	[...]
+message	[...]
+}
+GenerarFacturaBody{
+creadoPorUsuario	[...]
+}
+HabitacionPublicListItemDto{
+habitacionGuid	[...]
+tipoHabitacionGuid	[...]
+tipoNombre	[...]
+numeroHabitacion	[...]
+piso	[...]
+capacidadAdultos	[...]
+capacidadNinos	[...]
+precioBase	[...]
+moneda	[...]
+estadoHabitacion	[...]
+disponibleEnRango	[...]
+}
+HabitacionResponse{
+idHabitacion	[...]
+habitacionGuid	[...]
+idSucursal	[...]
+idTipoHabitacion	[...]
+numeroHabitacion	[...]
+piso	[...]
+precioBase	[...]
+descripcionHabitacion	[...]
+estadoHabitacion	[...]
+tipoHabitacionGuid	[...]
+tipoNombre	[...]
+tipoCapacidadAdultos	[...]
+tipoCapacidadNinos	[...]
+idTarifa	[...]
+nombreTarifa	[...]
+rowVersion	[...]
+}
+HabitacionResponseApiResponse{
+data	HabitacionResponse{...}
+success	[...]
+message	[...]
+}
+HabitacionResponseIReadOnlyListApiResponse{
+data	[...]
+success	[...]
+message	[...]
+}
+HabitacionResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+ImageUploadResponse{
+secure_url	[...]
+public_id	[...]
+asset_id	[...]
+version	[...]
+width	[...]
+height	[...]
+format	[...]
+resource_type	[...]
+bytes	[...]
+original_filename	[...]
+}
+ImageUploadResponseApiResponse{
+data	ImageUploadResponse{...}
+success	[...]
+message	[...]
+}
+LoginRequest{
+username	[...]
+password	[...]
+}
+LoginResponse{
+token	[...]
+refreshToken	[...]
+expiration	[...]
+usuarioId	[...]
+usuarioGuid	[...]
+username	[...]
+email	[...]
+roles	[...]
+}
+LoginResponseApiResponse{
+data	LoginResponse{...}
+success	[...]
+message	[...]
+}
+ModerarValoracionRequest{
+estadoValoracion	[...]
+modificadoPorUsuario	[...]
+rowVersion	[...]
+}
+ObjectApiResponse{
+data	{...}
+nullable: true
+success	[...]
+message	[...]
+}
+PagoResponse{
+pagoGuid	[...]
+idFactura	[...]
+idReserva	[...]
+monto	[...]
+metodoPago	[...]
+estadoPago	[...]
+fechaPagoUtc	[...]
+moneda	[...]
+codigoAutorizacion	[...]
+rowVersion	[...]
+}
+PagoResponseApiResponse{
+data	PagoResponse{...}
+success	[...]
+message	[...]
+}
+PagoResponseListApiResponse{
+data	[...]
+success	[...]
+message	[...]
+}
+PagoResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+ProblemDetails{
+type	[...]
+title	[...]
+status	[...]
+detail	[...]
+instance	[...]
+}
+RefreshTokenRequest{
+refreshToken	[...]
+}
+ReservaHabitacionPublicDto{
+reservaHabitacionGuid	[...]
+habitacionGuid	[...]
+fechaInicio	[...]
+fechaFin	[...]
+numAdultos	[...]
+numNinos	[...]
+precioNocheAplicado	[...]
+subtotalLinea	[...]
+valorIvaLinea	[...]
+descuentoLinea	[...]
+totalLinea	[...]
+estadoDetalle	[...]
+}
+ReservaHabitacionPublicRequest{
+tipoHabitacionGuid	[...]
+numHabitaciones	[...]
+numAdultos	[...]
+numNinos	[...]
+}
+ReservaHabitacionRequest{
+idHabitacion	[...]
+idTarifa	[...]
+fechaInicio	[...]
+fechaFin	[...]
+numAdultos	[...]
+numNinos	[...]
+precioNocheAplicado	[...]
+}
+ReservaHabitacionResponse{
+reservaHabitacionGuid	[...]
+idHabitacion	[...]
+fechaInicio	[...]
+fechaFin	[...]
+numAdultos	[...]
+numNinos	[...]
+precioNocheAplicado	[...]
+subtotalLinea	[...]
+valorIvaLinea	[...]
+descuentoLinea	[...]
+totalLinea	[...]
+estadoDetalle	[...]
+}
+ReservaHabitacionResponseApiResponse{
+data	ReservaHabitacionResponse{...}
+success	[...]
+message	[...]
+}
+ReservaPublicDto{
+reservaGuid	[...]
+codigoReserva	[...]
+estadoReserva	[...]
+sucursalGuid	[...]
+clienteGuid	[...]
+fechaReservaUtc	[...]
+fechaInicio	[...]
+fechaFin	[...]
+origenCanalReserva	[...]
+observaciones	[...]
+subtotalReserva	[...]
+valorIva	[...]
+totalReserva	[...]
+descuentoAplicado	[...]
+saldoPendiente	[...]
+habitaciones	[...]
+}
+ReservaResponse{
+idReserva	[...]
+reservaGuid	[...]
+codigoReserva	[...]
+idCliente	[...]
+idSucursal	[...]
+fechaInicio	[...]
+fechaFin	[...]
+subtotalReserva	[...]
+valorIva	[...]
+totalReserva	[...]
+saldoPendiente	[...]
+estadoReserva	[...]
+origenCanalReserva	[...]
+observaciones	[...]
+esWalkin	[...]
+habitaciones	[...]
+rowVersion	[...]
+}
+ReservaResponseApiResponse{
+data	ReservaResponse{...}
+success	[...]
+message	[...]
+}
+ReservaResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+ResponderValoracionRequest{
+respuestaHotel	[...]
+modificadoPorUsuario	[...]
+rowVersion	[...]
+}
+RolResponse{
+rolGuid	[...]
+nombreRol	[...]
+descripcionRol	[...]
+estadoRol	[...]
+activo	[...]
+}
+RolResponseApiResponse{
+data	RolResponse{...}
+success	[...]
+message	[...]
+}
+RolResponseListApiResponse{
+data	[...]
+success	[...]
+message	[...]
+}
+StringApiResponse{
+data	[...]
+success	[...]
+message	[...]
+}
+StringListApiResponse{
+data	[...]
+success	[...]
+message	[...]
+}
+SucursalImagenResponse{
+idSucursalImagen	[...]
+urlImagen	[...]
+descripcionImagen	[...]
+tipoImagen	[...]
+ordenVisualizacion	[...]
+esPrincipal	[...]
+fechaRegistroUtc	[...]
+rowVersion	[...]
+}
+SucursalImagenResponseApiResponse{
+data	SucursalImagenResponse{...}
+success	[...]
+message	[...]
+}
+SucursalImagenResponseListApiResponse{
+data	[...]
+success	[...]
+message	[...]
+}
+SucursalResponse{
+idSucursal	[...]
+sucursalGuid	[...]
+codigoSucursal	[...]
+nombreSucursal	[...]
+descripcionSucursal	[...]
+descripcionCorta	[...]
+tipoAlojamiento	[...]
+estrellas	[...]
+categoriaViaje	[...]
+pais	[...]
+provincia	[...]
+ciudad	[...]
+direccion	[...]
+ubicacion	[...]
+codigoPostal	[...]
+telefono	[...]
+correo	[...]
+latitud	[...]
+longitud	[...]
+horaCheckin	[...]
+horaCheckout	[...]
+aceptaNinos	[...]
+permiteMascotas	[...]
+sePermiteFumar	[...]
+estadoSucursal	[...]
+rowVersion	[...]
+}
+SucursalResponseApiResponse{
+data	SucursalResponse{...}
+success	[...]
+message	[...]
+}
+SucursalResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+TarifaResponse{
+tarifaGuid	[...]
+codigoTarifa	[...]
+idSucursal	[...]
+idTipoHabitacion	[...]
+nombreTarifa	[...]
+canalTarifa	[...]
+fechaInicio	[...]
+fechaFin	[...]
+precioPorNoche	[...]
+porcentajeIva	[...]
+minNoches	[...]
+maxNoches	[...]
+prioridad	[...]
+estadoTarifa	[...]
+rowVersion	[...]
+}
+TarifaResponseApiResponse{
+data	TarifaResponse{...}
+success	[...]
+message	[...]
+}
+TarifaResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+TipoHabitacionResponse{
+idTipoHabitacion	[...]
+tipoHabitacionGuid	[...]
+codigoTipoHabitacion	[...]
+nombreTipoHabitacion	[...]
+descripcion	[...]
+capacidadAdultos	[...]
+capacidadNinos	[...]
+capacidadTotal	[...]
+tipoCama	[...]
+areaM2	[...]
+permiteReservaPublica	[...]
+estadoTipoHabitacion	[...]
+rowVersion	[...]
+}
+TipoHabitacionResponseApiResponse{
+data	TipoHabitacionResponse{...}
+success	[...]
+message	[...]
+}
+TipoHabitacionResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+UsuarioResponse{
+usuarioGuid	[...]
+username	[...]
+correo	[...]
+nombres	[...]
+apellidos	[...]
+estadoUsuario	[...]
+activo	[...]
+roles	[...]
+rowVersion	[...]
+}
+UsuarioResponseApiResponse{
+data	UsuarioResponse{...}
+success	[...]
+message	[...]
+}
+UsuarioResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}
+ValoracionResponse{
+valoracionGuid	[...]
+idEstadia	[...]
+idCliente	[...]
+idSucursal	[...]
+puntuacionGeneral	[...]
+puntuacionLimpieza	[...]
+puntuacionConfort	[...]
+puntuacionUbicacion	[...]
+puntuacionInstalaciones	[...]
+puntuacionPersonal	[...]
+puntuacionCalidadPrecio	[...]
+comentarioPositivo	[...]
+comentarioNegativo	[...]
+tipoViaje	[...]
+estadoValoracion	[...]
+publicadaEnPortal	[...]
+respuestaHotel	[...]
+rowVersion	[...]
+}
+ValoracionResponseApiResponse{
+data	ValoracionResponse{...}
+success	[...]
+message	[...]
+}
+ValoracionResponsePaginatedResponse{
+items	[...]
+totalResultados	[...]
+paginaActual	[...]
+totalPaginas	[...]
+limite	[...]
+tieneSiguiente	[...]
+tieneAnterior	[...]
+}

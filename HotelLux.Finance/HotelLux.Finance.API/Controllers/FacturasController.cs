@@ -23,15 +23,15 @@ public class FacturasController : ControllerBase
         _pagos = pagos;
     }
 
-    [HttpGet("reserva/{reservaGuid:guid}")]
-    public async Task<IActionResult> ListarPorReserva(Guid reservaGuid, CancellationToken ct)
+    [HttpGet("reserva/{idReserva:guid}")]
+    public async Task<IActionResult> ListarPorReserva(Guid idReserva, CancellationToken ct)
     {
-        var data = await _facturas.ListarPorReservaGuidAsync(reservaGuid, ct);
+        var data = await _facturas.ListarPorReservaGuidAsync(idReserva, ct);
         return Ok(ApiResponse<IReadOnlyList<FacturaDto>>.Ok(data));
     }
 
     [HttpPost("generar-reserva/{reservaGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> GenerarReserva(
         Guid reservaGuid, [FromBody] GenerarFacturaRequestDto body, CancellationToken ct)
     {
@@ -51,7 +51,7 @@ public class FacturasController : ControllerBase
     }
 
     [HttpPost("generar-final/{reservaGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> GenerarFinal(
         Guid reservaGuid, [FromBody] GenerarFacturaRequestDto body, CancellationToken ct)
     {
@@ -72,7 +72,7 @@ public class FacturasController : ControllerBase
 
     /// <summary>Genera factura FINAL y registra un pago en efectivo simulado aprobado en cadena.</summary>
     [HttpPost("final-y-pago-simulado/{reservaGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> FinalYPagoSimulado(
         Guid reservaGuid, [FromBody] GenerarFacturaRequestDto body, CancellationToken ct)
     {
@@ -100,11 +100,7 @@ public class FacturasController : ControllerBase
     }
 
     [HttpGet("{facturaGuid:guid}/detalle")]
-    public Task<IActionResult> ObtenerDetalle(Guid facturaGuid, CancellationToken ct)
-        => ObtenerDetalles(facturaGuid, ct);
-
-    [HttpGet("{facturaGuid:guid}/detalles")]
-    public async Task<IActionResult> ObtenerDetalles(Guid facturaGuid, CancellationToken ct)
+    public async Task<IActionResult> ObtenerDetalle(Guid facturaGuid, CancellationToken ct)
     {
         var detalles = await _facturas.ListarDetallesAsync(facturaGuid, ct);
         return Ok(ApiResponse<object>.Ok(detalles));
@@ -118,7 +114,7 @@ public class FacturasController : ControllerBase
     }
 
     [HttpPatch("{facturaGuid:guid}/anular")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Anular(Guid facturaGuid, [FromBody] AnularFacturaDto dto, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(dto?.Motivo))

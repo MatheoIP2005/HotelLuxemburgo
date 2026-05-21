@@ -18,7 +18,7 @@ public class EstadiasController : ControllerBase
 
     /// <summary>Lista estadías con filtros opcionales de estado y sucursal.</summary>
     [HttpGet]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Listar(
         [FromQuery] string? estado,
         [FromQuery] Guid? sucursalGuid,
@@ -32,7 +32,7 @@ public class EstadiasController : ControllerBase
 
     /// <summary>Registra el check-in de una reserva confirmada.</summary>
     [HttpPost("check-in")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> CheckIn([FromBody] CheckInDto dto, CancellationToken ct)
     {
         dto.CreadoPorUsuario ??= User.Identity?.Name ?? "api_user";
@@ -42,7 +42,7 @@ public class EstadiasController : ControllerBase
 
     /// <summary>Alias de check-in con la reserva en la ruta.</summary>
     [HttpPost("checkin/{reservaGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> CheckInPorReserva(
         Guid reservaGuid, [FromBody] CheckInPorReservaBodyDto? body, CancellationToken ct)
     {
@@ -58,7 +58,7 @@ public class EstadiasController : ControllerBase
 
     /// <summary>Registra el check-out de una estadía activa y genera factura final.</summary>
     [HttpPatch("{estadiaGuid:guid}/check-out")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> CheckOut(Guid estadiaGuid, CancellationToken ct)
     {
         var usuario = User.Identity?.Name ?? "api_user";
@@ -68,13 +68,13 @@ public class EstadiasController : ControllerBase
 
     /// <summary>Alias spec: PATCH .../checkout (mismo comportamiento que check-out).</summary>
     [HttpPatch("{estadiaGuid:guid}/checkout")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public Task<IActionResult> CheckOutSpecAlias(Guid estadiaGuid, CancellationToken ct)
         => CheckOut(estadiaGuid, ct);
 
     /// <summary>Alias de check-out con el GUID de la estadía en el cuerpo.</summary>
     [HttpPatch("checkout")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> CheckOutPorBody([FromBody] CheckoutPorBodyDto body, CancellationToken ct)
     {
         var usuario = User.Identity?.Name ?? "api_user";
@@ -84,7 +84,7 @@ public class EstadiasController : ControllerBase
 
     /// <summary>Obtiene una estadía por su GUID.</summary>
     [HttpGet("{estadiaGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA,VENDEDOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> ObtenerPorGuid(Guid estadiaGuid, CancellationToken ct)
     {
         var data = await _estadia.ObtenerPorGuidAsync(estadiaGuid, ct);
@@ -95,7 +95,7 @@ public class EstadiasController : ControllerBase
 
     /// <summary>Marca o desmarca la habitación para mantenimiento al terminar la estadía.</summary>
     [HttpPatch("{estadiaGuid:guid}/mantenimiento")]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> MarcarMantenimiento(Guid estadiaGuid, CancellationToken ct)
     {
         var usuario = User.Identity?.Name ?? "api_user";

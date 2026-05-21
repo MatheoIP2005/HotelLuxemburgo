@@ -25,26 +25,26 @@ public class PagosController : ControllerBase
         return StatusCode(201, ApiResponse<object>.Created(new { pago.PagoGuid, dto.FacturaGuid, dto.Monto }, "Pago registrado."));
     }
 
-    [HttpPut("{guid:guid}/aprobar")]
-    [Authorize(Roles = "ADMINISTRADOR,CAJERO")]
-    public async Task<IActionResult> Aprobar(Guid guid, CancellationToken ct)
+    [HttpPut("{pagoGuid:guid}/aprobar")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
+    public async Task<IActionResult> Aprobar(Guid pagoGuid, CancellationToken ct)
     {
         var usuario = User.Identity?.Name ?? "api_user";
-        var ok = await _pagos.AprobarAsync(guid, usuario, ct);
+        var ok = await _pagos.AprobarAsync(pagoGuid, usuario, ct);
         if (!ok) return NotFound(ApiResponse<string>.Error("Pago no encontrado o ya procesado."));
         return Ok(ApiResponse<string>.Ok("Pago aprobado y saldo actualizado."));
     }
 
-    [HttpPatch("{guid:guid}/estado")]
-    [Authorize(Roles = "ADMINISTRADOR")]
-    public async Task<IActionResult> CambiarEstado(Guid guid, [FromBody] PagoEstadoDto dto, CancellationToken ct)
+    [HttpPatch("{pagoGuid:guid}/estado")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
+    public async Task<IActionResult> CambiarEstado(Guid pagoGuid, [FromBody] PagoEstadoDto dto, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(dto?.NuevoEstado))
             return BadRequest(ApiResponse<string>.Error("Estado obligatorio."));
         var usuario = User.Identity?.Name ?? "api_user";
         try
         {
-            var ok = await _pagos.ActualizarEstadoAsync(guid, dto.NuevoEstado, usuario, ct);
+            var ok = await _pagos.ActualizarEstadoAsync(pagoGuid, dto.NuevoEstado, usuario, ct);
             if (!ok) return NotFound(ApiResponse<string>.Error("Pago no encontrado."));
             return Ok(ApiResponse<string>.Ok("Estado de pago actualizado."));
         }
@@ -54,10 +54,10 @@ public class PagosController : ControllerBase
         }
     }
 
-    [HttpGet("{guid:guid}")]
-    public async Task<IActionResult> ObtenerPorGuid(Guid guid, CancellationToken ct)
+    [HttpGet("{pagoGuid:guid}")]
+    public async Task<IActionResult> ObtenerPorGuid(Guid pagoGuid, CancellationToken ct)
     {
-        var pago = await _pagos.ObtenerPorGuidAsync(guid, ct);
+        var pago = await _pagos.ObtenerPorGuidAsync(pagoGuid, ct);
         if (pago is null) return NotFound(ApiResponse<string>.Error("Pago no encontrado."));
         return Ok(ApiResponse<object>.Ok(pago));
     }

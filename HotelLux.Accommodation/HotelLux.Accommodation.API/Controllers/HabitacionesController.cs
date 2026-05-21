@@ -36,11 +36,11 @@ public class HabitacionesController : ControllerBase
     [HttpGet("disponibilidad")]
     public async Task<IActionResult> Disponibilidad(
         [FromQuery] Guid sucursalGuid,
-        [FromQuery] DateOnly fechaEntrada,
-        [FromQuery] DateOnly fechaSalida,
+        [FromQuery] DateOnly fechaInicio,
+        [FromQuery] DateOnly fechaFin,
         CancellationToken ct)
     {
-        var result = await _service.ListarDisponiblesAsync(sucursalGuid, fechaEntrada, fechaSalida, ct);
+        var result = await _service.ListarDisponiblesAsync(sucursalGuid, fechaInicio, fechaFin, ct);
         return Ok(ApiResponse<IReadOnlyList<HabitacionDTO>>.Ok(result, "Disponibilidad consultada exitosamente."));
     }
 
@@ -48,13 +48,13 @@ public class HabitacionesController : ControllerBase
     [HttpGet("disponibles")]
     public Task<IActionResult> Disponibles(
         [FromQuery] Guid sucursalGuid,
-        [FromQuery] DateOnly fechaEntrada,
-        [FromQuery] DateOnly fechaSalida,
+        [FromQuery] DateOnly fechaInicio,
+        [FromQuery] DateOnly fechaFin,
         CancellationToken ct)
-        => Disponibilidad(sucursalGuid, fechaEntrada, fechaSalida, ct);
+        => Disponibilidad(sucursalGuid, fechaInicio, fechaFin, ct);
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Crear([FromBody] HabitacionCreateDTO dto, CancellationToken ct)
     {
         dto.CreadoPorUsuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -64,7 +64,7 @@ public class HabitacionesController : ControllerBase
     }
 
     [HttpPut("{habitacionGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Actualizar(Guid habitacionGuid, [FromBody] HabitacionUpdateDTO dto, CancellationToken ct)
     {
         dto.ModificadoPorUsuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -74,7 +74,7 @@ public class HabitacionesController : ControllerBase
     }
 
     [HttpPatch("{habitacionGuid:guid}/estado")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> CambiarEstado(Guid habitacionGuid, [FromBody] CambiarEstadoRequest request, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -83,7 +83,7 @@ public class HabitacionesController : ControllerBase
     }
 
     [HttpPatch("{habitacionGuid:guid}/inhabilitar")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Inhabilitar(Guid habitacionGuid, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -92,7 +92,7 @@ public class HabitacionesController : ControllerBase
     }
 
     [HttpDelete("{habitacionGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> Eliminar(Guid habitacionGuid, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";

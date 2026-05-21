@@ -17,7 +17,7 @@ public class CargosController : ControllerBase
     public CargosController(ICargoEstadiaService service) => _service = service;
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Crear(
         Guid estadiaGuid, [FromBody] CargoEstadiaCreateDto dto, CancellationToken ct)
     {

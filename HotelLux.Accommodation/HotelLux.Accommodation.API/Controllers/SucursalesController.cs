@@ -32,7 +32,7 @@ public class SucursalesController : ControllerBase
     }
 
     [HttpPatch("{sucursalGuid:guid}/politicas")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     [ProducesResponseType(typeof(ApiResponse<SucursalDTO>), StatusCodes.Status200OK)]
     public async Task<IActionResult> ActualizarPoliticas(
         Guid sucursalGuid, [FromBody] SucursalPoliticasPatchDTO? dto, CancellationToken ct)
@@ -64,7 +64,7 @@ public class SucursalesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     [ProducesResponseType(typeof(ApiResponse<SucursalDTO>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Crear([FromBody] SucursalCreateDTO dto, CancellationToken ct)
@@ -76,7 +76,7 @@ public class SucursalesController : ControllerBase
     }
 
     [HttpPut("{sucursalGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     [ProducesResponseType(typeof(ApiResponse<SucursalDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Actualizar(Guid sucursalGuid, [FromBody] SucursalUpdateDTO dto, CancellationToken ct)
@@ -88,7 +88,7 @@ public class SucursalesController : ControllerBase
     }
 
     [HttpPatch("{sucursalGuid:guid}/inhabilitar")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Inhabilitar(Guid sucursalGuid, CancellationToken ct)
@@ -99,7 +99,7 @@ public class SucursalesController : ControllerBase
     }
 
     [HttpDelete("{sucursalGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Eliminar(Guid sucursalGuid, CancellationToken ct)

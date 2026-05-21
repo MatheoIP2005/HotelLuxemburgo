@@ -13,8 +13,7 @@ namespace HotelLux.Reservation.API.Controllers;
 /// </summary>
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/accomodations/reservas")]
-[AllowAnonymous]
+[Route("api/v{version:apiVersion}/accommodations/reservas")]
 public class AccommodationPublicReservasController : ControllerBase
 {
     private readonly IReservaService _service;
@@ -29,6 +28,7 @@ public class AccommodationPublicReservasController : ControllerBase
     }
 
     [HttpPost]
+    [AllowAnonymous]
     public async Task<IActionResult> CrearYConfirmar([FromBody] ReservaCreateDTO dto, CancellationToken ct)
     {
         if ((!dto.ClienteGuid.HasValue || dto.ClienteGuid == Guid.Empty) && dto.Cliente is null)
@@ -72,6 +72,7 @@ public class AccommodationPublicReservasController : ControllerBase
     }
 
     [HttpGet("{reservaGuid:guid}")]
+    [Authorize]
     public async Task<IActionResult> ObtenerPublico(Guid reservaGuid, CancellationToken ct)
     {
         var data = await _service.ObtenerPorGuidAsync(reservaGuid, ct);

@@ -8,4 +8,5 @@ public interface ITipoHabitacionCatalogoDataService
     Task<TipoHabitacionCatalogoDataModel?> ObtenerAsync(int idTipo, int idCatalogo, CancellationToken ct = default);
     Task AsignarAsync(int idTipoHabitacion, int idCatalogo, string usuario, CancellationToken ct = default);
     Task RemoverAsync(int idTipoHabitacion, int idCatalogo, CancellationToken ct = default);
+    Task RemoverPorIdAsync(int idTipoHabitacion, int idTipoHabCatalogo, CancellationToken ct = default);
 }

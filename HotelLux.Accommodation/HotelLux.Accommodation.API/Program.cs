@@ -51,11 +51,18 @@ builder.Services.AddAccommodationServices(builder.Configuration);
 builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
+// Kestrel — REST en httpPort (Http1AndHttp2) + listener dedicado gRPC h2c en grpcPort (Http2).
 var httpPort = int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var p) ? p : 5002;
+var grpcPort = int.TryParse(Environment.GetEnvironmentVariable("GRPC_PORT"), out var gp) ? gp : 5102;
 builder.WebHost.ConfigureKestrel(opts =>
 {
     opts.ListenAnyIP(httpPort, lo =>
         lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2);
+    if (grpcPort != httpPort)
+    {
+        opts.ListenAnyIP(grpcPort, lo =>
+            lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
+    }
 });
 
 var app = builder.Build();

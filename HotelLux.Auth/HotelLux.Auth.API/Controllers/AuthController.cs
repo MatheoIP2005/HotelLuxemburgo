@@ -67,7 +67,7 @@ public class AuthController : ControllerBase
         _authService.RegistrarRefreshToken(result.UsuarioGuid, refreshToken, refreshJti);
 
         _ = _auditEmitter.EmitAsync(
-            "usuario_app",
+            "seguridad.usuario_app",
             "LOGIN",
             result.UsuarioGuid.ToString(),
             result.UsuarioGuid.ToString(),
@@ -147,7 +147,7 @@ public class AuthController : ControllerBase
         await _authService.LogoutAsync(request.refreshToken, cancellationToken);
 
         _ = _auditEmitter.EmitAsync(
-            "usuario_app",
+            "seguridad.usuario_app",
             "LOGOUT",
             string.Empty,
             User.FindFirst("usuario_guid")?.Value ?? string.Empty,

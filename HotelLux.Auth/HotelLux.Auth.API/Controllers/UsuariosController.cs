@@ -11,7 +11,7 @@ namespace HotelLux.Auth.API.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/internal/usuarios")]
-[Authorize(Roles = "ADMINISTRADOR")]
+[Authorize(Roles = "ADMIN,VENDEDOR")]
 public class UsuariosController : ControllerBase
 {
     private readonly IUsuarioService _usuarioService;
@@ -83,6 +83,7 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpDelete("{usuarioGuid:guid}")]
+    [Authorize(Roles = "ADMIN")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Eliminar(Guid usuarioGuid, CancellationToken cancellationToken)
@@ -103,6 +104,7 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpDelete("{usuarioGuid:guid}/roles/{idRol:guid}")]
+    [Authorize(Roles = "ADMIN")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemoverRol(Guid usuarioGuid, Guid idRol, CancellationToken cancellationToken)

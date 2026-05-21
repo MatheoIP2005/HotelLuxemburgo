@@ -412,6 +412,19 @@ public class ReservaService : IReservaService
         }
     }
 
+    public async Task EliminarHabitacionPorIdAsync(
+        Guid reservaGuid, int idReservaHabitacion, string usuario, CancellationToken ct = default)
+    {
+        var m = await _reservaDataService.ObtenerPorGuidAsync(reservaGuid, ct);
+        if (m is null) throw new NotFoundException("Reserva", reservaGuid);
+
+        var line = m.Habitaciones.FirstOrDefault(h => h.IdReservaHabitacion == idReservaHabitacion);
+        if (line is null)
+            throw new NotFoundException("Línea de habitación", idReservaHabitacion.ToString());
+
+        await EliminarHabitacionAsync(reservaGuid, line.ReservaHabitacionGuid, usuario, ct);
+    }
+
     public async Task EliminarHabitacionAsync(
         Guid reservaGuid, Guid reservaHabitacionGuid, string usuario, CancellationToken ct = default)
     {

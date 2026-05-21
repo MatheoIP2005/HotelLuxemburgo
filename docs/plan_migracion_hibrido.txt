@@ -1,0 +1,550 @@
+Hotel Luxemburgo — SISTEMA DE GESTIÓN HOTELERA
+Plan de Migración: REST Monolito → Microservicios Híbrido
+gRPC (procesos internos) + REST (endpoints públicos)
+
+Integración de Sistemas — PUCE 2026 | Docente: Damián Nicolalde
+Sprint 2: 01 May – 29 May 2026 | Sprint 3: 30 May – 26 Jun 2026
+================================================================================
+
+
+1. PRINCIPIO DE LA ARQUITECTURA HÍBRIDA
+================================================================================
+
+La arquitectura adopta un modelo donde REST gobierna la frontera pública del
+sistema y gRPC gobierna la comunicación interna entre microservicios. Esta
+separación no es opcional: responde a dos restricciones irreconciliables con
+un único protocolo.
+
+Regla de oro:
+  • Si el endpoint es llamado por el cliente, browser o frontend React
+    → REST (público, sin autenticación o con JWT visible)
+  • Si el endpoint es llamado exclusivamente por otro microservicio
+    → gRPC (interno, tipado, HTTP/2)
+  • Si el endpoint es llamado por ambos (ej. admin REST + servicio interno)
+    → mantener REST interno + implementar equivalente gRPC
+
+Canal                           | Protocolo         | Autenticación                    | Propósito
+Cliente / Browser → Gateway     | REST / HTTPS      | JWT Bearer                       | Contrato público estable
+Servicio → Servicio (interno)   | gRPC / HTTP2      | mTLS (académico: cleartext)      | Rendimiento, tipado estricto
+Eventos de auditoría            | gRPC fire-forget  | Sin respuesta bloqueante         | Trazabilidad sin latencia
+
+
+2. MAPA DE MICROSERVICIOS Y SEPARACIÓN DE BASES DE DATOS
+================================================================================
+
+Cada microservicio es dueño exclusivo de su base de datos (Database-per-Service).
+Las FK cruzadas del monolito se reemplazan por columnas GUID sin FK formal.
+
+Servicio                | Puerto REST | Puerto gRPC | Base de Datos          | Tablas Principales
+auth-service            | :5001       | :5101       | HotelJJ_Auth           | USUARIO_APP, ROL, USUARIOS_ROLES
+accommodation-service   | :5002       | :5102       | HotelJJ_Accommodation  | SUCURSAL, TIPO_HABITACION, HABITACION, TARIFA, CATALOGO_SERVICIOS, TIPO_HAB_IMAGEN
+reservation-service     | :5003       | :5103       | HotelJJ_Reservation    | CLIENTES, RESERVAS, RESERVAS_HABITACIONES
+stay-service            | :5004       | :5104       | HotelJJ_Stay           | ESTADIAS, CARGO_ESTADIA
+billing-service         | :5005       | :5105       | HotelJJ_Billing        | FACTURAS, FACTURA_DETALLE
+payment-service         | :5006       | :5106       | HotelJJ_Payment        | PAGOS
+rating-service          | :5007       | —           | HotelJJ_Rating         | VALORACIONES
+audit-service           | :5008 int.  | :5108 cons. | HotelJJ_Audit          | AUDITORIA
+
+
+3. CRITERIO DE DECISIÓN: QUÉ CAMBIA A gRPC Y QUÉ SE MANTIENE REST
+================================================================================
+
+No todos los endpoints internos migran a gRPC. La migración aplica cuando el
+endpoint es invocado exclusivamente por otro servicio en un flujo transaccional
+o de validación. Los endpoints administrativos de lectura permanecen como REST.
+
+[MIGRAN A gRPC]
+  • ValidateToken (auth)
+    - REST actual: No existía como REST interno
+    - Razón: Todos los servicios validan JWT en cada request; latencia crítica
+
+  • CheckAvailability (accommodation)
+    - REST actual: GET /habitaciones/disponibilidad
+    - Razón: Llamado por reservation-service en cada confirmación; real-time
+
+  • ConfirmRoomLock (accommodation)
+    - REST actual: PATCH /habitaciones/{id}/estado
+    - Razón: Solo reservation-service lo llama; bloqueo atómico
+
+  • UpdateRoomStatus / check-in-out (accommodation)
+    - REST actual: PATCH /habitaciones/{id}/estado
+    - Razón: Solo stay-service lo llama al hacer check-in / check-out
+
+  • GenerateReservationInvoice (billing)
+    - REST actual: POST /facturas (REST privado)
+    - Razón: Solo reservation-service genera facturas; eliminar acceso REST
+
+  • GenerateFinalInvoice (billing)
+    - REST actual: POST /facturas/final (REST privado)
+    - Razón: Solo stay-service al hacer checkout
+
+  • UpdateInvoiceBalance / MarkInvoicePaid (billing)
+    - REST actual: No existía explícito
+    - Razón: payment-service actualiza saldo; nunca expuesto al cliente
+
+  • ValidateStayCompleted (stay)
+    - REST actual: No existía
+    - Razón: rating-service verifica estadía antes de aceptar valoración
+
+  • EmitAuditEvent (audit)
+    - REST actual: No existía
+    - Razón: Fire-and-forget desde todos los servicios; no bloquea flujo
+
+[SE MANTIENEN REST]
+  • GET /api/v1/accommodations/** (búsqueda pública)
+    - Razón: Consumido por browser / frontend; no tiene equivalente gRPC
+
+  • POST /api/v1/internal/auth/login-refresh-logout
+    - Razón: Frontend llama login; gRPC solo para ValidateToken inter-servicio
+
+  • GET/POST /api/v1/public/reservas
+    - Razón: El cliente crea reservas vía Gateway; interfaz de usuario
+
+  • PATCH reservas/{id}/confirmar - cancelar
+    - Razón: Operación admin via Gateway; internamente orquesta gRPC
+
+  • GET /internal/facturas, /estadias, /pagos (lectura admin)
+    - Razón: Lectura administrativa via Gateway; no hay ganancia con gRPC
+
+  • GET /accommodations/{guid}/reviews
+    - Razón: Consumido por browser; rating-service usa gRPC solo para validar estadía
+
+
+4. DEFINICIÓN DE .PROTO FILES POR MICROSERVICIO
+================================================================================
+
+Los archivos .proto son el contrato de comunicación interno. Deben vivir en un
+repositorio compartido (/protos/) y compilarse como paquete NuGet referenciado
+por todos los servicios. Jose Daniel es el responsable de mantener este repo.
+
+--- 4.1 auth.proto ---
+  ValidateToken
+    Request:  ValidateTokenRequest { string token }
+    Response: ValidateTokenResponse { bool valid; string user_guid; repeated string roles; }
+
+  GetUserRoles
+    Request:  GetUserRolesRequest { string user_guid }
+    Response: GetUserRolesResponse { repeated string roles; }
+
+--- 4.2 accommodation.proto ---
+  CheckAvailability
+    Request:  CheckAvailRequest { string sucursal_guid; string fecha_entrada; string fecha_salida; int32 cantidad_personas; }
+    Response: CheckAvailResponse { bool disponible; repeated HabitacionDisponible habitaciones; }
+
+  ConfirmRoomLock
+    Request:  ConfirmLockRequest { string habitacion_guid; string reserva_guid; string fecha_entrada; string fecha_salida; }
+    Response: ConfirmLockResponse { bool success; string mensaje; }
+
+  UpdateRoomStatus
+    Request:  UpdateRoomStatusRequest { string habitacion_guid; string nuevo_estado; string operacion_guid; }
+    Response: UpdateRoomStatusResponse { bool success; }
+
+  ReleaseRoomLock
+    Request:  ReleaseRoomRequest { string habitacion_guid; string reserva_guid; }
+    Response: ReleaseRoomResponse { bool success; }
+
+--- 4.3 reservation.proto ---
+  GetReservation
+    Request:  GetReservationRequest { string reserva_guid }
+    Response: GetReservationResponse { string reserva_guid; string estado; string cliente_guid; }
+
+  ValidateReservationForCheckin
+    Request:  ValidateCheckinRequest { string reserva_guid }
+    Response: ValidateCheckinResponse { bool valid; string cliente_guid; repeated string habitacion_guids; }
+
+--- 4.4 stay.proto ---
+  ValidateStayCompleted
+    Request:  ValidateStayRequest { string estadia_guid }
+    Response: ValidateStayResponse { bool completed; string reserva_guid; }
+
+  GetStayStatus
+    Request:  GetStayStatusRequest { string estadia_guid }
+    Response: GetStayStatusResponse { string estado; string cliente_guid; }
+
+--- 4.5 billing.proto ---
+  GenerateReservationInvoice
+    Request:  GenReservInvoiceRequest { string reserva_guid; repeated InvoiceLineItem items; }
+    Response: GenInvoiceResponse { string factura_guid; decimal total; }
+
+  GenerateFinalInvoice
+    Request:  GenFinalInvoiceRequest { string reserva_guid; string estadia_guid; }
+    Response: GenInvoiceResponse { string factura_guid; decimal total; }
+
+  UpdateInvoiceBalance
+    Request:  UpdateBalanceRequest { string factura_guid; decimal monto_pagado; }
+    Response: UpdateBalanceResponse { decimal saldo_pendiente; }
+
+  MarkInvoicePaid
+    Request:  MarkPaidRequest { string factura_guid }
+    Response: MarkPaidResponse { bool success; }
+
+--- 4.6 audit.proto (fire-and-forget) ---
+  EmitAuditEvent
+    Request:  AuditEventRequest { string servicio_origen; string tabla_afectada; string operacion; string entidad_guid; string usuario_guid; string detalle_json; }
+    Response: google.protobuf.Empty
+
+
+5. PLANES DE IMPLEMENTACIÓN POR INTEGRANTE
+================================================================================
+
+Cada integrante tiene asignado un microservicio específico. Los planes detallan
+qué endpoints mantener como REST, cuáles migrar a gRPC, y las tareas por semana.
+
+--------------------------------------------------------------------------------
+5.1  JORGE JARA (JJ) — Infrastructure Lead
+     Microservicio: Separación de DBs + DevOps (Docker / docker-compose)
+--------------------------------------------------------------------------------
+
+BRECHAS A CORREGIR DEL SPRINT 1:
+  • Eliminar GET /WeatherForecast (scaffolding de .NET sin remover)
+  • Corregir parámetros de ruta: usar {entidadGuid} en lugar de {id}/{*Guid}
+  • Agregar GET /api/v1/internal/habitaciones/disponibilidad (actualmente ausente)
+  • Agregar POST /api/v1/public/reservas (verificar asignación)
+
+SPRINT 2 — Semanas 1–2: Scripts de separación de DBs
+  • Crear los 8 scripts SQL:
+      - HotelJJ_Auth (seguridad.USUARIO_APP, ROL, USUARIOS_ROLES)
+      - HotelJJ_Accommodation (SUCURSAL, TIPO_HABITACION, HABITACION, TARIFA, ...)
+      - HotelJJ_Reservation (CLIENTES, RESERVAS, RESERVAS_HABITACIONES)
+      - HotelJJ_Stay (ESTADIAS, CARGO_ESTADIA)
+      - HotelJJ_Billing (FACTURAS, FACTURA_DETALLE)
+      - HotelJJ_Payment (PAGOS)
+      - HotelJJ_Rating (VALORACIONES)
+      - HotelJJ_Audit (seguridad.AUDITORIA)
+  • Incluir scripts de semilla con GUIDs fijos para referencias cruzadas
+  • BLOQUEANTE para todo el equipo — entrega en Semana 1, sin excepciones
+
+SPRINT 2 — Semanas 3–4: Docker + Infraestructura
+  • Crear Dockerfiles para cada microservicio (.NET 10 / ASP.NET Core)
+  • Crear docker-compose.yml base con todos los servicios y sus puertos
+  • SQL Server en Docker: mcr.microsoft.com/mssql/server:2022-latest,
+    MSSQL_MEMORY_LIMIT_MB=512 por instancia
+  • Red interna Docker para gRPC entre contenedores (cleartext HTTP/2, sin TLS)
+  • Documentar variables de entorno requeridas por cada servicio
+
+SPRINT 3: Integración y estabilidad
+  • Mantener docker-compose actualizado conforme cada integrante integra
+  • Resolver problemas de red HTTP/2 entre contenedores
+  • Documentar instrucciones de levantamiento local en README.md raíz
+
+Endpoint REST               | Acción requerida
+GET /WeatherForecast        | ELIMINAR — scaffolding
+GET /habitaciones/dispon.   | AGREGAR — faltante crítico Sprint 1
+Todos los {id} en rutas     | RENOMBRAR a {entidadGuid}
+
+--------------------------------------------------------------------------------
+5.2  JOSE DANIEL (JD) — API Gateway Lead
+     Microservicio: API Gateway (YARP .NET) + Repositorio de Protos
+--------------------------------------------------------------------------------
+
+BRECHAS A CORREGIR DEL SPRINT 1:
+  • Eliminar POST /api/v1/alojamientos y POST /api/v1/alojamientos/buscar
+  • Eliminar GET /api/v1/alojamientos/busqueda
+  • Agregar POST /api/v1/public/reservas
+  • Agregar GET /api/v1/internal/habitaciones/disponibilidad
+
+SPRINT 2 — Semanas 1–2: Gateway scaffold + Proto repository
+  • Crear HotelJJ.Gateway usando YARP (.NET 10)
+  • Configurar rutas en yarp.json:
+      /api/v1/auth/**                 → auth-service:5001
+      /api/v1/accommodations/**       → accommodation-service:5002
+      /api/v1/public/reservas/**      → reservation-service:5003
+      /api/v1/internal/reservas/**    → reservation-service:5003
+      /api/v1/internal/clientes/**    → reservation-service:5003
+      /api/v1/internal/estadias/**    → stay-service:5004
+      /api/v1/internal/facturas/**    → billing-service:5005
+      /api/v1/internal/pagos/**       → payment-service:5006
+      /api/v1/internal/valoraciones/** → rating-service:5007
+  • Crear /protos/ con: auth.proto, accommodation.proto, reservation.proto,
+    stay.proto, billing.proto, audit.proto
+  • Compilar y publicar como NuGet interno (HotelJJ.Protos)
+  • GATEKEEPER: cualquier cambio de .proto requiere aprobación de JD
+
+SPRINT 2 — Semanas 3–4: Middleware JWT
+  • Middleware de validación JWT para rutas /internal/**
+  • Flujo: header Authorization → ValidateToken (gRPC) → 401 si inválido
+  • Rutas /public/** y /accommodations/** no requieren JWT
+  • Rate limiting básico en endpoints públicos
+
+SPRINT 3: Estabilización
+  • Verificar todas las rutas del contrato Sprint 1
+  • Documentar mapa de rutas en README.md
+  • Actualizar NuGet de protos según cambios del equipo
+
+Rutas a eliminar:
+  POST /api/v1/alojamientos           → duplica /accommodations
+  POST /api/v1/alojamientos/buscar    → ambigüedad con /search
+  GET  /api/v1/alojamientos/busqueda  → mover a /accommodations/search
+
+--------------------------------------------------------------------------------
+5.3  MATHEO — accommodation-service
+     Puerto REST :5002 | Puerto gRPC :5102
+--------------------------------------------------------------------------------
+
+BRECHAS A CORREGIR DEL SPRINT 1:
+  • Agregar POST /api/v1/public/reservas (Booking central no puede crear reservas)
+  • Verificar soft-delete: PATCH /inhabilitar en lugar de DELETE físico
+
+SPRINT 2 — Semanas 1–2: Separar microservicio
+  • Crear HotelJJ.AccommodationService (.NET 10 / ASP.NET Core)
+  • EF Core → HotelJJ_Accommodation (esperar script de JJ)
+  • Migrar controllers REST:
+      AccommodationController: GET /search, GET /{guid}, GET /categories
+        → REST público, sin JWT
+      HabitacionController: CRUD + GET /disponibilidad
+        → REST interno, JWT Bearer
+      GET /accommodations/{guid}/reviews → proxy al rating-service
+
+SPRINT 2 — Semanas 3–4: Implementar gRPC server
+  • Referenciar HotelJJ.Protos (publicado por JD)
+  • Implementar AccommodationGrpcService:
+      CheckAvailability    → consulta HABITACION + TARIFA; retorna disponible/no
+      ConfirmRoomLock      → cambia estado a 'reservada'; transacción atómica
+      UpdateRoomStatus     → libre/ocupada/mantenimiento (llamado por stay-service)
+      ReleaseRoomLock      → libera habitación si se cancela reserva
+  • Emitir EmitAuditEvent en cada cambio de estado de habitación
+  • Validar JWT via auth-service.ValidateToken en endpoints internos
+
+Endpoint                                    | Protocolo final | Notas
+GET /api/v1/accommodations/search           | REST público    | Sin JWT
+GET /api/v1/accommodations/{guid}           | REST público    | Sin JWT
+GET /api/v1/accommodations/categories       | REST público    | Sin JWT
+GET /api/v1/internal/habitaciones/**        | REST interno    | JWT Bearer
+GET /api/v1/internal/habitaciones/dispon.   | REST interno    | Dual con gRPC
+CheckAvailability                           | gRPC :5102      | reservation-service
+ConfirmRoomLock                             | gRPC :5102      | reservation-service
+UpdateRoomStatus                            | gRPC :5102      | stay-service
+
+--------------------------------------------------------------------------------
+5.4  JUANITO — reservation-service
+     Puerto REST :5003 | Puerto gRPC :5103
+--------------------------------------------------------------------------------
+
+BRECHAS A CORREGIR DEL SPRINT 1 — CRÍTICAS:
+  • CRÍTICO: Mover auth de /api/v1/auth/ a /api/v1/internal/auth/
+    → problema más grave; rompe contrato interno REST
+  • Agregar POST /api/v1/internal/auth/refresh
+  • Agregar POST /api/v1/internal/auth/logout
+
+SPRINT 2 — Semanas 1–2: Separar microservicio
+  • Crear HotelJJ.ReservationService (.NET 10 / ASP.NET Core)
+  • EF Core → HotelJJ_Reservation (CLIENTES, RESERVAS, RESERVAS_HABITACIONES)
+  • Migrar controllers:
+      ReservaController: POST /public/reservas, GET /internal/reservas,
+        PATCH confirmar, PATCH cancelar
+      ClienteController: CRUD /internal/clientes/{guid}
+      GET /internal/habitaciones/disponibilidad → llama gRPC a accommodation
+
+SPRINT 2 — Semanas 3–4: gRPC cliente outbound + server
+  • Clientes gRPC outbound:
+      accommodation.CheckAvailability      → ANTES de crear reserva
+      accommodation.ConfirmRoomLock        → al confirmar (PATCH /confirmar)
+      billing.GenerateReservationInvoice   → tras confirmar exitosamente
+      auth.ValidateToken                   → en todos los endpoints /internal/**
+      audit.EmitAuditEvent                 → en cada operación CRUD
+  • ReservationGrpcService (servidor):
+      GetReservation              → para stay-service
+      ValidateReservationForCheckin → para stay-service
+  • SAGA PATCH /confirmar (5 pasos obligatorios en orden):
+      1. CheckAvailability → habitación sigue disponible?
+      2. ConfirmRoomLock   → bloquear habitación
+      3. RESERVAS = 'CON'  → actualizar BD local
+      4. GenerateReservationInvoice → crear factura en billing
+      5. EmitAuditEvent    → registrar confirmación
+
+Endpoint                                | Protocolo final   | Notas
+POST /api/v1/public/reservas            | REST público      | Sin JWT
+GET  /api/v1/internal/reservas/**       | REST interno      | JWT Bearer
+PATCH /reservas/{guid}/confirmar        | REST interno      | Orquesta saga gRPC
+PATCH /reservas/{guid}/cancelar         | REST interno      | Libera lock gRPC
+GET/POST /api/v1/internal/clientes/**   | REST interno      | JWT Bearer
+GetReservation                          | gRPC :5103        | Servidor
+ValidateReservationForCheckin           | gRPC :5103        | Servidor
+CheckAvailability (cliente)             | gRPC → :5102      | Outbound
+GenerateReservationInvoice (cliente)    | gRPC → :5105      | Outbound
+
+--------------------------------------------------------------------------------
+5.5  KELVIN — auth-service
+     Puerto REST :5001 | Puerto gRPC :5101
+--------------------------------------------------------------------------------
+
+BRECHAS A CORREGIR DEL SPRINT 1:
+  • Eliminar GET / (scaffolding — no exponer en producción)
+  • Eliminar GET /alojamientos/busqueda (no pertenece a auth)
+  • Unificar bajo /api/v1/internal/auth/ — eliminar alias sin /internal/
+  • Estandarizar parámetros de ruta a {entidadGuid}
+
+SPRINT 2 — Semanas 1–2: Separar microservicio
+  • Crear HotelJJ.AuthService (.NET 10 / ASP.NET Core)
+  • EF Core → HotelJJ_Auth (USUARIO_APP, ROL, USUARIOS_ROLES)
+  • Controllers REST:
+      POST /api/v1/internal/auth/login   → genera JWT (access + refresh)
+      POST /api/v1/internal/auth/refresh → renueva access token
+      POST /api/v1/internal/auth/logout  → invalida refresh token
+      CRUD /api/v1/internal/usuarios     → JWT Bearer
+      CRUD /api/v1/internal/roles        → JWT Bearer
+      POST/GET /api/v1/internal/usuarios/{guid}/roles → asignación de roles
+
+SPRINT 2 — Semanas 3–4: gRPC server (PRIORIDAD MÁXIMA)
+  • Primer gRPC en estar operativo — todos los demás dependen de él
+  • AuthGrpcService:
+      ValidateToken → verifica firma JWT; retorna { valid, user_guid, roles[] }
+      GetUserRoles  → retorna lista de roles activos dado user_guid
+  • Cache Redis: 95% de llamadas ValidateToken desde caché (TTL = vida del token)
+  • EmitAuditEvent en login, logout, creación de usuarios, cambios de rol
+
+SPRINT 3: Hardening
+  • ValidateToken < 10ms P99 en todos los servicios que lo consumen
+  • Documentar JWT: algoritmo (HS256/RS256), claims, tiempo de vida
+  • PATCH /inhabilitar en usuarios y roles (soft-delete correcto)
+
+Endpoint                                | Protocolo final | Notas
+POST /api/v1/internal/auth/login        | REST interno    | Frontend via Gateway
+POST /api/v1/internal/auth/refresh      | REST interno    | Frontend renueva token
+POST /api/v1/internal/auth/logout       | REST interno    | Frontend invalida sesión
+CRUD /api/v1/internal/usuarios/**       | REST interno    | Solo admin
+CRUD /api/v1/internal/roles/**          | REST interno    | Solo admin
+GET /                                   | ELIMINAR        | Scaffolding .NET
+ValidateToken                           | gRPC :5101      | Llamado por TODOS
+GetUserRoles                            | gRPC :5101      | Para RBAC granular
+
+
+5.6–5.13 INTEGRANTES ADICIONALES — RESUMEN
+================================================================================
+
+5.6  IGNACIO — auth-service (coordinación con Kelvin)
+  • Implementar capa gRPC de auth-service junto a Kelvin
+  • Sem 1-2: Levantar servidor gRPC :5101 con AuthGrpcService
+  • Sem 3-4: Caché Redis para ValidateToken
+  • Sprint 3: Primer servicio en pasar Definition of Done
+
+5.7  MARÍA PAULINA — accommodation-service (gRPC crítico)
+  • Segundo servicio gRPC más crítico
+  • Sem 1-2: Proyecto + EF Core sobre HotelJJ_Accommodation
+  • Sem 3-4: CheckAvailability, ConfirmRoomLock, UpdateRoomStatus, ReleaseRoomLock
+  • Sprint 3: E2E con reservation-service
+  • BLOQUEANTE: necesita script de JJ antes de iniciar
+
+5.8  DANA — stay-service (Puerto REST :5004 | gRPC :5104)
+  • Sem 1-2: HotelJJ.StayService, EF Core HotelJJ_Stay
+  • Migrar: POST /checkin/{reservaGuid}, POST /checkout/{estadiaGuid}, /cargos
+  • Sem 3-4: Clientes gRPC outbound:
+      reservation.ValidateReservationForCheckin → antes del check-in
+      accommodation.UpdateRoomStatus → 'ocupada' check-in / 'libre' checkout
+      billing.GenerateFinalInvoice   → al hacer checkout
+      audit.EmitAuditEvent           → check-in, checkout, cargos
+  • Servidor gRPC: ValidateStayCompleted (para rating-service)
+  • Sprint 3: Coordinación con Doménica para E2E
+
+5.9  DOMÉNICA — reservation-service (integración E2E)
+  • Liderar integración final del flujo completo
+  • Sprint 2: Saga de confirmación orquestando todos los gRPC calls
+  • Sprint 3: Suite E2E de 10 pasos:
+      Crear cliente → Crear reserva → Confirmar → Verificar factura →
+      Registrar pago → Check-in → Agregar cargo → Check-out →
+      Verificar factura final → Valoración
+  • Todos los demás servicios gRPC deben estar operativos antes de Sprint 3
+
+5.10  MARTÍN HERRERA — billing-service + Scrum Master
+      (Puerto REST :5005 | gRPC :5105)
+  • Sem 1-2: HotelJJ.BillingService, EF Core HotelJJ_Billing
+  • FacturaController REST: listar, obtener, anular (solo lectura y anulación)
+  • IMPORTANTE: generación de facturas SOLO por gRPC (eliminar de REST):
+      GenerateReservationInvoice → equivale a SP_GENERAR_FACTURA_RESERVA
+      GenerateFinalInvoice       → equivale a SP_GENERAR_FACTURA_FINAL
+      UpdateInvoiceBalance       → actualiza saldo_pendiente
+      MarkInvoicePaid            → estado PAG cuando saldo = 0
+  • EmitAuditEvent en cada generación/anulación
+  • Scrum Master: tablero ZOHO Sprints, dailies, sprint review
+
+5.11  ANAHÍ BERRU — payment-service + Gestión de Board
+      (Puerto REST :5006 | gRPC :5106)
+  • Sem 1-2: HotelJJ.PaymentService, EF Core HotelJJ_Payment
+  • PagoController REST: listar, obtener por guid, actualizar estado
+  • PATCH /pagos/{guid}/estado → REST externo (webhook de pasarela)
+  • Cliente HTTP hacia pasarela externa (Stripe sandbox o mock)
+  • Sem 3-4: gRPC outbound:
+      billing.UpdateInvoiceBalance → al registrar pago parcial
+      billing.MarkInvoicePaid      → si saldo resultante = 0
+      audit.EmitAuditEvent         → en cada pago
+  • Idempotencia: índice único filtrado sobre transaccion_externa
+  • Gestora de board: actualizar criterios en ZOHO
+
+5.12  DYLAN MEDINA — rating-service + Product Owner
+      (Puerto REST :5007 | Sin servidor gRPC)
+  • Sem 1-2: HotelJJ.RatingService, EF Core HotelJJ_Rating
+  • Endpoints REST:
+      GET  /accommodations/{guid}/reviews → público, sin JWT
+      POST /api/v1/internal/valoraciones  → JWT Bearer
+      PATCH /valoraciones/{guid}/moderar  → JWT Bearer
+  • gRPC outbound: stay.ValidateStayCompleted → solo estadías FIN pueden valorar
+  • EmitAuditEvent en publicación y ocultamiento
+  • Validación: puntuación 0–10, retornar 422 si fuera de rango
+  • PO: criterios de aceptación con validaciones gRPC, priorizar MoSCoW
+
+5.13  STEPHANO ZAPATA — audit-service + Product Owner
+      (gRPC :5108 consumer | Sin Gateway público)
+  • Sem 1-2: HotelJJ.AuditService, EF Core HotelJJ_Audit
+  • NO expone REST externo — solo consume gRPC
+  • AuditGrpcConsumer: recibe EmitAuditEvent, persiste en AUDITORIA
+  • Sem 3-4: Fire-and-forget:
+      - Retorna google.protobuf.Empty inmediatamente
+      - Inserción BD asíncrona (Task.Run o channel en memoria)
+      - Si cae, demás servicios continúan (evento se pierde — aceptable)
+  • REST interno directo (sin Gateway):
+      GET /api/v1/internal/auditoria        → filtros tabla + rango de fechas
+      GET /api/v1/internal/auditoria/{guid} → detalle de evento
+  • Sprint 3: 100% de CRUD en todos los servicios genera evento de auditoría
+  • PO: acceptance criteria con campo 'genera evento de auditoría: Sí/No'
+
+
+6. ORDEN DE IMPLEMENTACIÓN Y DEPENDENCIAS CRÍTICAS
+================================================================================
+
+Semana  | Responsables          | Tareas (BLOQUEANTES primero)
+--------|----------------------|--------------------------------------------------
+Sem 1–2 | JJ (BLOQUEANTE)      | 8 scripts SQL de separación de DBs con GUIDs semilla
+Sem 1–2 | JD (BLOQUEANTE)      | Gateway scaffold + repositorio protos + NuGet
+Sem 1–2 | Juanito/JJ           | Dockerfiles + docker-compose base
+Sem 2–3 | Kelvin + Ignacio     | auth-service gRPC :5101 — primer servicio gRPC
+Sem 2–3 | Matheo + Mª Paulina  | accommodation-service gRPC :5102
+Sem 3–4 | Martín               | billing-service gRPC :5105
+Sem 3–4 | Dana                 | stay-service gRPC :5104
+Sem 3–4 | Anahí                | payment-service (depende de billing gRPC)
+Sem 3–4 | Dylan                | rating-service (depende de stay gRPC)
+Sem 3–4 | Stephano             | audit-service gRPC consumer
+Sem 3–4 | Doménica             | reservation-service — integra todos
+Sprint 3| Doménica + Dana      | Suite E2E — 10 pasos del flujo completo
+Sprint 3| Todos                | Correcciones, tests, README, PR review
+
+
+7. DEFINITION OF DONE — CHECKLIST POR MICROSERVICIO
+================================================================================
+
+Un microservicio se considera Done cuando cumple TODOS los siguientes criterios:
+
+  [ ] Levanta en Docker sin errores (docker-compose up)
+  [ ] Todos sus endpoints REST retornan el código HTTP correcto
+  [ ] Sus métodos gRPC responden correctamente (grpcurl o test unitario)
+  [ ] Emite eventos a audit-service en cada operación CRUD
+  [ ] Valida JWT via auth-service.ValidateToken en endpoints protegidos
+  [ ] Al menos 5 tests unitarios en capa Application/Business
+  [ ] README.md con instrucciones de ejecución local
+  [ ] PR aprobado por al menos 1 compañero de equipo
+
+
+8. RIESGOS PRINCIPALES Y MITIGACIONES
+================================================================================
+
+Riesgo                                    | Prob. | Impacto | Mitigación
+Protos inconsistentes entre equipos       | Alta  | Alto    | JD como gatekeeper; aprobación obligatoria
+gRPC no funciona en Docker por HTTP/2     | Media | Alto    | Cleartext entre contenedores; TLS solo en Gateway
+Scripts de DB llegan tarde (JJ bloquea)  | Media | Alto    | JJ entrega en Semana 1 — prioridad máxima Sprint 2
+Tiempo insuficiente para integración      | Alta  | Alto    | Priorizar reservation+accommodation+billing; stubs resto
+SQL Server en Docker consume mucha RAM    | Media | Medio   | MSSQL_MEMORY_LIMIT_MB=512 por instancia
+Saga con error parcial                    | Media | Alto    | Compensación: si GenerateInvoice falla → ReleaseRoomLock
+
+
+================================================================================
+                        — Fin del Plan de Migración —
+================================================================================

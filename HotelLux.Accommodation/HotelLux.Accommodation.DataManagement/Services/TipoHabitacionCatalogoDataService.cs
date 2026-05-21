@@ -49,4 +49,13 @@ public class TipoHabitacionCatalogoDataService : ITipoHabitacionCatalogoDataServ
         _uow.TipoHabitacionCatalogoRepository.Eliminar(entity);
         await _uow.SaveChangesAsync(ct);
     }
+
+    public async Task RemoverPorIdAsync(int idTipoHabitacion, int idTipoHabCatalogo, CancellationToken ct = default)
+    {
+        var entity = await _uow.TipoHabitacionCatalogoRepository.ObtenerPorIdAsync(idTipoHabCatalogo, ct);
+        if (entity is null || entity.IdTipoHabitacion != idTipoHabitacion)
+            return;
+        _uow.TipoHabitacionCatalogoRepository.Eliminar(entity);
+        await _uow.SaveChangesAsync(ct);
+    }
 }

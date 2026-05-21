@@ -1,0 +1,209 @@
+GET /api/v1/accommodations/search
+
+{
+  "items": [
+    {
+      "sucursalGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "nombre": "string",
+      "ciudad": "string",
+      "provincia": "string",
+      "pais": "string",
+      "direccion": "string",
+      "descripcion": "string",
+      "categoria": "string",
+      "estrellas": 0,
+      "tipoAlojamiento": "string",
+      "precioDesde": 0,
+      "moneda": "string",
+      "imagenPrincipalUrl": "string",
+      "promedioValoracion": 0,
+      "totalValoraciones": 0,
+      "habitacionesDisponibles": 0,
+      "serviciosDestacados": [
+        "string"
+      ],
+      "horaCheckIn": "string",
+      "horaCheckOut": "string",
+      "aceptaNinos": true,
+      "permiteMascotas": true
+    }
+  ],
+  "pagina": 0,
+  "limite": 0,
+  "totalResultados": 0,
+  "totalPaginas": 0,
+  "tieneSiguiente": true,
+  "tieneAnterior": true
+}
+
+GET /api/v1/accommodations/{sucursalGuid}
+
+{
+  "sucursalGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "nombre": "string",
+  "ciudad": "string",
+  "provincia": "string",
+  "pais": "string",
+  "direccion": "string",
+  "descripcion": "string",
+  "categoria": "string",
+  "estrellas": 0,
+  "tipoAlojamiento": "string",
+  "precioDesde": 0,
+  "moneda": "string",
+  "imagenPrincipalUrl": "string",
+  "promedioValoracion": 0,
+  "totalValoraciones": 0,
+  "habitacionesDisponibles": 0,
+  "serviciosDestacados": [
+    "string"
+  ],
+  "horaCheckIn": "string",
+  "horaCheckOut": "string",
+  "aceptaNinos": true,
+  "permiteMascotas": true,
+  "descripcionCompleta": "string",
+  "tiposHabitacion": [
+    {
+      "tipoHabitacionGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "nombre": "string",
+      "tipoCama": "string",
+      "capacidadAdultos": 0,
+      "capacidadNinos": 0,
+      "areaM2": 0,
+      "precioBase": 0,
+      "imagenes": [
+        "string"
+      ],
+      "disponiblesEnRango": null
+    }
+  ],
+  "tarifasActivas": [
+    {
+      "tarifaGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "nombre": "string",
+      "precioPorNoche": 0,
+      "moneda": "string",
+      "fechaInicio": "2026-05-13T14:53:27.775Z",
+      "fechaFin": "2026-05-13T14:53:27.775Z",
+      "minNoches": 0,
+      "tipoHabitacionGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    }
+  ],
+  "amenities": [
+    "string"
+  ],
+  "imagenes": [
+    "string"
+  ],
+  "politicas": {
+    "horaCheckIn": "string",
+    "horaCheckOut": "string",
+    "aceptaNinos": true,
+    "permiteMascotas": true,
+    "politicas": "string"
+  }
+}
+
+GET /api/v1/accommodations/{sucursalGuid}/reviews
+
+{
+  "items": [
+    {
+      "valoracionGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "puntuacion": 0,
+      "comentarioPositivo": "string",
+      "comentarioNegativo": "string",
+      "tipoViaje": "string",
+      "fecha": "2026-05-13T14:52:24.491Z",
+      "nombreVisibleCliente": "string",
+      "respuestaPropiedad": "string"
+    }
+  ],
+  "pagina": 0,
+  "limite": 0,
+  "totalResultados": 0,
+  "totalPaginas": 0,
+  "tieneSiguiente": true,
+  "tieneAnterior": true
+}
+
+POST /api/v1/accommodations/reservas
+
+{
+  "clienteGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "sucursalGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "fechaInicio": "2026-05-13T14:50:40.691Z",
+  "fechaFin": "2026-05-13T14:50:40.691Z",
+  "descuentoAplicado": 0,
+  "observaciones": "string",
+  "esWalkin": true,
+  "origenCanalReserva": "string",
+  "cliente": {
+    "tipoIdentificacion": "string",
+    "numeroIdentificacion": "string",
+    "nombres": "string",
+    "apellidos": "string",
+    "correo": "string",
+    "telefono": "string",
+    "direccion": "string"
+  },
+  "habitaciones": [
+    {
+      "habitacionGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "tipoHabitacionGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "numHabitaciones": 0,
+      "fechaInicio": "2026-05-13T14:50:40.691Z",
+      "fechaFin": "2026-05-13T14:50:40.691Z",
+      "numAdultos": 0,
+      "numNinos": 0,
+      "descuentoLinea": 0,
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ],
+  "additionalProp1": "string",
+  "additionalProp2": "string",
+  "additionalProp3": "string"
+}
+
+GET /api/v1/accommodations/reservas/{reservaGuid}
+
+{
+  "reservaGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "codigoReserva": "string",
+  "clienteGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "sucursalGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "fechaReservaUtc": "2026-05-13T14:50:58.696Z",
+  "fechaInicio": "2026-05-13T14:50:58.696Z",
+  "fechaFin": "2026-05-13T14:50:58.696Z",
+  "subtotalReserva": 0,
+  "valorIva": 0,
+  "totalReserva": 0,
+  "descuentoAplicado": 0,
+  "saldoPendiente": 0,
+  "origenCanalReserva": "string",
+  "estadoReserva": "string",
+  "fechaConfirmacionUtc": "2026-05-13T14:50:58.696Z",
+  "fechaCancelacionUtc": "2026-05-13T14:50:58.696Z",
+  "motivoCancelacion": "string",
+  "observaciones": "string",
+  "esWalkin": true,
+  "habitaciones": [
+    {
+      "reservaHabitacionGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "habitacionGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "fechaInicio": "2026-05-13T14:50:58.696Z",
+      "fechaFin": "2026-05-13T14:50:58.696Z",
+      "numAdultos": 0,
+      "numNinos": 0,
+      "precioNocheAplicado": 0,
+      "subtotalLinea": 0,
+      "valorIvaLinea": 0,
+      "descuentoLinea": 0,
+      "totalLinea": 0,
+      "estadoDetalle": "string"
+    }
+  ]
+}

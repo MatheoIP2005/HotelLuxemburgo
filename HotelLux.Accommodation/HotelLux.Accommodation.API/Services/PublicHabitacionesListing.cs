@@ -21,14 +21,14 @@ public sealed class PublicHabitacionesListing
         Guid sucursalGuid,
         Guid? tipoHabitacionGuid,
         DateTime? fechaInicio,
-        DateTime? fechaSalida,
+        DateTime? fechaFin,
         CancellationToken cancellationToken)
     {
         IReadOnlyList<HabitacionDTO> habitaciones;
-        if (fechaInicio.HasValue && fechaSalida.HasValue)
+        if (fechaInicio.HasValue && fechaFin.HasValue)
         {
             var desde = fechaInicio.Value.Date;
-            var hasta = fechaSalida.Value.Date;
+            var hasta = fechaFin.Value.Date;
             habitaciones = await _habitaciones.ListarDisponiblesAsync(
                 sucursalGuid,
                 DateOnly.FromDateTime(desde),
@@ -54,7 +54,7 @@ public sealed class PublicHabitacionesListing
             .ToListAsync(cancellationToken);
         var tipoPorGuid = tipoInfo.ToDictionary(x => x.TipoHabitacionGuid);
 
-        var enRango = fechaInicio.HasValue && fechaSalida.HasValue;
+        var enRango = fechaInicio.HasValue && fechaFin.HasValue;
         return habitaciones.Select(h =>
         {
             tipoPorGuid.TryGetValue(h.TipoHabitacionGuid, out var ti);

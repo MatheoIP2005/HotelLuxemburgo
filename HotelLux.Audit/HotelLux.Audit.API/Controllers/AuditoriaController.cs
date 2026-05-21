@@ -10,7 +10,7 @@ namespace HotelLux.Audit.API.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/internal/auditoria")]
-[Authorize(Roles = "ADMINISTRADOR")]
+[Authorize(Roles = "ADMIN,VENDEDOR")]
 public class AuditoriaController : ControllerBase
 {
     private readonly IEventoAuditoriaRepository _repo;

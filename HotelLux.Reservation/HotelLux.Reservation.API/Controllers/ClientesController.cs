@@ -29,55 +29,55 @@ public class ClientesController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA,VENDEDOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Listar([FromQuery] int pagina = 1, [FromQuery] int limite = 20, CancellationToken ct = default)
     {
         var result = await _service.ListarAsync(pagina, limite, ct);
         return Ok(ApiResponse<object>.Ok(result));
     }
 
-    [HttpGet("{guid:guid}/reservas")]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA,VENDEDOR,CLIENTE")]
+    [HttpGet("{clienteGuid:guid}/reservas")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> ListarReservasPorCliente(
-        Guid guid, [FromQuery] int pagina = 1, [FromQuery] int limite = 20, CancellationToken ct = default)
+        Guid clienteGuid, [FromQuery] int pagina = 1, [FromQuery] int limite = 20, CancellationToken ct = default)
     {
-        if (!ClienteSelfAccessHelper.PuedeVerCliente(User, guid))
+        if (!ClienteSelfAccessHelper.PuedeVerCliente(User, clienteGuid))
             return Forbid();
-        var cliente = await _service.ObtenerPorGuidAsync(guid, ct);
-        if (cliente is null) throw new NotFoundException("Cliente", guid);
+        var cliente = await _service.ObtenerPorGuidAsync(clienteGuid, ct);
+        if (cliente is null) throw new NotFoundException("Cliente", clienteGuid);
         var page = await _reservas.BuscarAsync(new ReservaFiltroDTO
         {
-            ClienteGuid = guid,
+            ClienteGuid = clienteGuid,
             Pagina = pagina,
             Limite = limite
         }, ct);
         return Ok(ApiResponse<object>.Ok(page));
     }
 
-    [HttpGet("{guid:guid}/valoraciones")]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA,VENDEDOR,CLIENTE")]
-    public async Task<IActionResult> ListarValoracionesPorCliente(Guid guid, CancellationToken ct = default)
+    [HttpGet("{clienteGuid:guid}/valoraciones")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
+    public async Task<IActionResult> ListarValoracionesPorCliente(Guid clienteGuid, CancellationToken ct = default)
     {
-        if (!ClienteSelfAccessHelper.PuedeVerCliente(User, guid))
+        if (!ClienteSelfAccessHelper.PuedeVerCliente(User, clienteGuid))
             return Forbid();
-        var cliente = await _service.ObtenerPorGuidAsync(guid, ct);
-        if (cliente is null) throw new NotFoundException("Cliente", guid);
-        var list = await _stay.GetValoracionesByClienteAsync(guid, ct);
+        var cliente = await _service.ObtenerPorGuidAsync(clienteGuid, ct);
+        if (cliente is null) throw new NotFoundException("Cliente", clienteGuid);
+        var list = await _stay.GetValoracionesByClienteAsync(clienteGuid, ct);
         return Ok(ApiResponse<IReadOnlyList<StayValoracionClienteDto>>.Ok(list));
     }
 
-    [HttpGet("{guid:guid}")]
-    public async Task<IActionResult> ObtenerPorGuid(Guid guid, CancellationToken ct = default)
+    [HttpGet("{clienteGuid:guid}")]
+    public async Task<IActionResult> ObtenerPorGuid(Guid clienteGuid, CancellationToken ct = default)
     {
-        if (!ClienteSelfAccessHelper.PuedeVerCliente(User, guid))
+        if (!ClienteSelfAccessHelper.PuedeVerCliente(User, clienteGuid))
             return Forbid();
-        var cliente = await _service.ObtenerPorGuidAsync(guid, ct);
-        if (cliente is null) throw new NotFoundException("Cliente", guid);
+        var cliente = await _service.ObtenerPorGuidAsync(clienteGuid, ct);
+        if (cliente is null) throw new NotFoundException("Cliente", clienteGuid);
         return Ok(ApiResponse<object>.Ok(cliente));
     }
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA,VENDEDOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Crear([FromBody] ClienteCreateDto dto, CancellationToken ct = default)
     {
         dto.CreadoPorUsuario ??= User.Identity?.Name ?? "api_user";
@@ -85,32 +85,32 @@ public class ClientesController : ControllerBase
         return StatusCode(201, ApiResponse<object>.Created(created, "Cliente registrado."));
     }
 
-    [HttpPut("{guid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA")]
-    public async Task<IActionResult> Actualizar(Guid guid, [FromBody] ClienteUpdateDto dto, CancellationToken ct = default)
+    [HttpPut("{clienteGuid:guid}")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
+    public async Task<IActionResult> Actualizar(Guid clienteGuid, [FromBody] ClienteUpdateDto dto, CancellationToken ct = default)
     {
         dto.ModificadoPorUsuario ??= User.Identity?.Name ?? "api_user";
-        var updated = await _service.ActualizarAsync(guid, dto, ct);
+        var updated = await _service.ActualizarAsync(clienteGuid, dto, ct);
         return Ok(ApiResponse<object>.Ok(updated));
     }
 
-    [HttpDelete("{guid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
-    public async Task<IActionResult> Eliminar(Guid guid, CancellationToken ct = default)
+    [HttpDelete("{clienteGuid:guid}")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> Eliminar(Guid clienteGuid, CancellationToken ct = default)
     {
         var usuario = User.Identity?.Name ?? "api_user";
-        await _service.EliminarLogicoAsync(guid, usuario, ct);
+        await _service.EliminarLogicoAsync(clienteGuid, usuario, ct);
         return NoContent();
     }
 
-    [HttpPatch("{guid:guid}/inhabilitar")]
-    [Authorize(Roles = "ADMINISTRADOR")]
-    public async Task<IActionResult> Inhabilitar(Guid guid, [FromBody] InhabilitarDto dto, CancellationToken ct = default)
+    [HttpPatch("{clienteGuid:guid}/inhabilitar")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
+    public async Task<IActionResult> Inhabilitar(Guid clienteGuid, [FromBody] InhabilitarDto dto, CancellationToken ct = default)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Motivo))
             throw new ValidationException("Motivo obligatorio.", new[] { "Motivo es obligatorio." });
         var usuario = User.Identity?.Name ?? "api_user";
-        await _service.InhabilitarAsync(guid, dto.Motivo, usuario, ct);
+        await _service.InhabilitarAsync(clienteGuid, dto.Motivo, usuario, ct);
         return Ok(ApiResponse<string>.Ok("Cliente inhabilitado."));
     }
 }

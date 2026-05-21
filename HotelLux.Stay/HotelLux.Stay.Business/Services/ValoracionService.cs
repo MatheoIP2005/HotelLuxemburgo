@@ -123,6 +123,9 @@ public class ValoracionService : IValoracionService
 
     public async Task ModerarOcultarAsync(Guid valoracionGuid, string usuario, CancellationToken ct = default)
     {
+        if (await _valoracionData.ObtenerPorGuidAsync(valoracionGuid, ct) is null)
+            throw new NotFoundException("Valoración", valoracionGuid);
+
         await _valoracionData.MarcarOcultaModeracionAsync(valoracionGuid, usuario, ct);
 
         _audit.EmitFireAndForget(
@@ -136,6 +139,9 @@ public class ValoracionService : IValoracionService
 
     public async Task EliminarAsync(Guid valoracionGuid, string usuario, CancellationToken ct = default)
     {
+        if (await _valoracionData.ObtenerPorGuidAsync(valoracionGuid, ct) is null)
+            throw new NotFoundException("Valoración", valoracionGuid);
+
         await _valoracionData.MarcarOcultaModeracionAsync(valoracionGuid, usuario, ct);
 
         _audit.EmitFireAndForget(

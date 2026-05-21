@@ -18,7 +18,7 @@ public class ValoracionesController : ControllerBase
 
     /// <summary>Listado paginado (operación interna).</summary>
     [HttpGet]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA,VENDEDOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> ListarPaginado(
         [FromQuery] int pagina = 1, [FromQuery] int limite = 20, CancellationToken ct = default)
     {
@@ -46,7 +46,7 @@ public class ValoracionesController : ControllerBase
 
     /// <summary>Marca la valoración como oculta (moderación).</summary>
     [HttpPatch("{valoracionGuid:guid}/moderar")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Moderar(Guid valoracionGuid, CancellationToken ct)
     {
         var usuario = User.Identity?.Name ?? "api_user";
@@ -56,7 +56,7 @@ public class ValoracionesController : ControllerBase
 
     /// <summary>Publica la respuesta del hotel a una valoración.</summary>
     [HttpPatch("{valoracionGuid:guid}/respuesta")]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Responder(
         Guid valoracionGuid, [FromBody] ValoracionResponderDto dto, CancellationToken ct)
     {
@@ -72,14 +72,14 @@ public class ValoracionesController : ControllerBase
 
     /// <summary>Alias spec: PATCH .../responder (mismo cuerpo que <c>respuesta</c>).</summary>
     [HttpPatch("{valoracionGuid:guid}/responder")]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public Task<IActionResult> ResponderAlias(
         Guid valoracionGuid, [FromBody] ValoracionResponderDto dto, CancellationToken ct)
         => Responder(valoracionGuid, dto, ct);
 
     /// <summary>Eliminación lógica (spec DELETE) — Admin.</summary>
     [HttpDelete("{valoracionGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> Eliminar(Guid valoracionGuid, CancellationToken ct)
     {
         var usuario = User.Identity?.Name ?? "api_user";
@@ -89,7 +89,7 @@ public class ValoracionesController : ControllerBase
 
     /// <summary>Crea una valoración para una estadía finalizada.</summary>
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR,CLIENTE")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Crear([FromBody] ValoracionCreateDto dto, CancellationToken ct)
     {
         dto.CreadoPorUsuario ??= User.Identity?.Name ?? "api_user";

@@ -82,7 +82,7 @@ public class UsuarioService : IUsuarioService
 
         var actor = ActorUsuarioGuid();
         _ = _auditEmitter.EmitAsync(
-            "usuario_app",
+            "seguridad.usuario_app",
             "CREATE",
             creado.UsuarioGuid.ToString(),
             actor,
@@ -104,7 +104,7 @@ public class UsuarioService : IUsuarioService
 
         var actor = ActorUsuarioGuid();
         _ = _auditEmitter.EmitAsync(
-            "usuario_app",
+            "seguridad.usuario_app",
             "UPDATE",
             usuarioGuid.ToString(),
             actor,
@@ -129,7 +129,7 @@ public class UsuarioService : IUsuarioService
 
         var actor = ActorUsuarioGuid();
         _ = _auditEmitter.EmitAsync(
-            "usuario_app",
+            "seguridad.usuario_app",
             "DISABLE",
             usuarioGuid.ToString(),
             actor,
@@ -147,7 +147,7 @@ public class UsuarioService : IUsuarioService
 
         var actor = ActorUsuarioGuid();
         _ = _auditEmitter.EmitAsync(
-            "usuario_app",
+            "seguridad.usuario_app",
             "DELETE",
             usuarioGuid.ToString(),
             actor,
@@ -198,7 +198,7 @@ public class UsuarioService : IUsuarioService
 
         var actor = ActorUsuarioGuid();
         _ = _auditEmitter.EmitAsync(
-            "usuario_app",
+            "seguridad.usuarios_roles",
             "ASSIGN_ROLE",
             usuarioGuid.ToString(),
             actor,
@@ -230,7 +230,7 @@ public class UsuarioService : IUsuarioService
 
         var actor = ActorUsuarioGuid();
         _ = _auditEmitter.EmitAsync(
-            "usuario_app",
+            "seguridad.usuarios_roles",
             "REMOVE_ROLE",
             usuarioGuid.ToString(),
             actor,

@@ -60,6 +60,7 @@ CREATE TABLE hospedaje.estadia (
     fecha_modificacion_utc     TIMESTAMPTZ  NULL,
     modificacion_ip            VARCHAR(45)  NULL,
     servicio_origen            VARCHAR(50)  NOT NULL DEFAULT 'stay-service',
+    es_eliminado               BOOLEAN      NOT NULL DEFAULT FALSE,
     CONSTRAINT uq_estadia_guid           UNIQUE (estadia_guid),
     CONSTRAINT uq_estadia_reserva_hab    UNIQUE (reserva_habitacion_guid),
     -- ACT=Activa (check-in hecho, sin checkout) | FIN=Finalizada | CAN=Cancelada
@@ -114,6 +115,7 @@ CREATE TABLE hospedaje.valoracion (
     id_valoracion              INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     valoracion_guid            UUID         NOT NULL DEFAULT gen_random_uuid(),
     id_estadia                 INT          NOT NULL,                        -- FK local
+    estadia_guid               UUID         NOT NULL,                        -- ref denormalizada (la usa EF)
     cliente_guid               UUID         NOT NULL,                        -- ref logica
     sucursal_guid              UUID         NOT NULL,                        -- ref logica
     habitacion_guid            UUID         NULL,                            -- ref logica
@@ -142,6 +144,9 @@ CREATE TABLE hospedaje.valoracion (
     fecha_modificacion_utc     TIMESTAMPTZ  NULL,
     modificacion_ip            VARCHAR(45)  NULL,
     servicio_origen            VARCHAR(50)  NOT NULL DEFAULT 'stay-service',
+    es_eliminado               BOOLEAN      NOT NULL DEFAULT FALSE,
+    nombre_visible_cliente     VARCHAR(150) NULL,
+    fecha_publicacion_utc      TIMESTAMPTZ  NOT NULL DEFAULT now(),
     CONSTRAINT uq_valoracion_guid          UNIQUE (valoracion_guid),
     CONSTRAINT uq_valoracion_estadia_clte  UNIQUE (id_estadia, cliente_guid),
     CONSTRAINT fk_valoracion_estadia       FOREIGN KEY (id_estadia)

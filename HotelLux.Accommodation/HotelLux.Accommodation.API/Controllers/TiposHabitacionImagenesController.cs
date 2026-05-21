@@ -25,7 +25,7 @@ public class TiposHabitacionImagenesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Crear(Guid tipoHabitacionGuid, [FromBody] TipoHabitacionImagenCreateDTO dto, CancellationToken ct)
     {
         dto.CreadoPorUsuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -33,11 +33,11 @@ public class TiposHabitacionImagenesController : ControllerBase
         return StatusCode(StatusCodes.Status201Created, ApiResponse<TipoHabitacionImagenDTO>.Created(result));
     }
 
-    [HttpDelete("{idImagen:int}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
-    public async Task<IActionResult> Eliminar(Guid tipoHabitacionGuid, int idImagen, CancellationToken ct)
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> Eliminar(Guid tipoHabitacionGuid, int id, CancellationToken ct)
     {
-        await _service.EliminarAsync(tipoHabitacionGuid, idImagen, ct);
+        await _service.EliminarAsync(tipoHabitacionGuid, id, ct);
         return NoContent();
     }
 }

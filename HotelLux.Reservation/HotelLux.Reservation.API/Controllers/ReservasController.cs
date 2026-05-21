@@ -28,22 +28,10 @@ public class ReservasController : ControllerBase
         CancellationToken ct = default)
     {
         var p = pagina < 1 ? 1 : pagina;
-        var maxLimite = User.IsInRole("CLIENTE") ? 200 : 500;
-        var l = limite < 1
-            ? (User.IsInRole("CLIENTE") ? 20 : 100)
-            : Math.Min(limite, maxLimite);
-
-        Guid? clienteFiltro = null;
-        if (User.IsInRole("CLIENTE"))
-        {
-            var cg = ClienteSelfAccessHelper.TryGetClienteGuidClaim(User);
-            if (!cg.HasValue) return Forbid();
-            clienteFiltro = cg;
-        }
+        var l = limite < 1 ? 100 : Math.Min(limite, 500);
 
         var page = await _service.BuscarAsync(new ReservaFiltroDTO
         {
-            ClienteGuid = clienteFiltro,
             Pagina = p,
             Limite = l
         }, ct);
@@ -53,13 +41,6 @@ public class ReservasController : ControllerBase
     [HttpGet("buscar")]
     public async Task<IActionResult> Buscar([FromQuery] ReservaFiltroDTO filtro, CancellationToken ct)
     {
-        if (User.IsInRole("CLIENTE"))
-        {
-            var cg = ClienteSelfAccessHelper.TryGetClienteGuidClaim(User);
-            if (!cg.HasValue) return Forbid();
-            filtro.ClienteGuid = cg;
-        }
-
         var data = await _service.BuscarAsync(filtro, ct);
         return Ok(ApiResponse<PagedResultDTO<ReservaDTO>>.Ok(data));
     }
@@ -84,7 +65,7 @@ public class ReservasController : ControllerBase
     }
 
     [HttpPost("{reservaGuid:guid}/habitaciones")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> AgregarHabitacion(
         Guid reservaGuid, [FromBody] ReservaHabitacionCreateDTO dto, CancellationToken ct)
     {
@@ -95,19 +76,19 @@ public class ReservasController : ControllerBase
         return StatusCode(201, ApiResponse<ReservaHabitacionDTO>.Created(line, "Línea agregada."));
     }
 
-    [HttpDelete("{reservaGuid:guid}/habitaciones/{lineaGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR,RECEPCIONISTA")]
-    public async Task<IActionResult> EliminarHabitacion(Guid reservaGuid, Guid lineaGuid, CancellationToken ct)
+    [HttpDelete("{reservaGuid:guid}/habitaciones/{id:int}")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> EliminarHabitacion(Guid reservaGuid, int id, CancellationToken ct)
     {
         if (!ClienteSelfAccessHelper.EsStaff(User))
             return Forbid();
         var usuario = User.Identity?.Name ?? "api_user";
-        await _service.EliminarHabitacionAsync(reservaGuid, lineaGuid, usuario, ct);
+        await _service.EliminarHabitacionPorIdAsync(reservaGuid, id, usuario, ct);
         return Ok(ApiResponse<string>.Ok("Línea eliminada."));
     }
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Crear([FromBody] ReservaCreateDTO dto, CancellationToken ct)
     {
         dto.CreadoPorUsuario ??= User.Identity?.Name ?? "api_user";
@@ -117,7 +98,7 @@ public class ReservasController : ControllerBase
     }
 
     [HttpPatch("{reservaGuid:guid}/confirmar")]
-    [Authorize(Roles = "ADMINISTRADOR,VENDEDOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Confirmar(Guid reservaGuid, CancellationToken ct)
     {
         var res = await _service.ObtenerPorGuidAsync(reservaGuid, ct);
@@ -140,7 +121,7 @@ public class ReservasController : ControllerBase
     }
 
     [HttpDelete("{reservaGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> Eliminar(Guid reservaGuid, CancellationToken ct)
     {
         var usuario = User.Identity?.Name ?? "api_user";

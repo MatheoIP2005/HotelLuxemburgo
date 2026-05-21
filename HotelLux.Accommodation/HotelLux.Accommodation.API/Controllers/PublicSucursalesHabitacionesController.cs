@@ -21,35 +21,35 @@ public class PublicSucursalesHabitacionesController : ControllerBase
     public async Task<IActionResult> Listar(
         Guid sucursalGuid,
         [FromQuery] Guid? tipo_habitacion_guid,
-        [FromQuery] DateTime? fecha_inicio,
-        [FromQuery] DateTime? fecha_salida,
+        [FromQuery] DateTime? fechaInicio,
+        [FromQuery] DateTime? fechaFin,
         CancellationToken cancellationToken = default)
     {
-        if (fecha_inicio.HasValue ^ fecha_salida.HasValue)
+        if (fechaInicio.HasValue ^ fechaFin.HasValue)
             return BadRequest(new
             {
                 status = 400,
                 error = "Parámetros inválidos",
-                details = new[] { "fecha_inicio y fecha_salida deben enviarse juntas o omitirse ambas." },
+                details = new[] { "fechaInicio y fechaFin deben enviarse juntas o omitirse ambas." },
                 timestamp = DateTime.UtcNow
             });
 
-        if (fecha_inicio.HasValue && fecha_salida.HasValue)
+        if (fechaInicio.HasValue && fechaFin.HasValue)
         {
-            var desde = fecha_inicio.Value.Date;
-            var hasta = fecha_salida.Value.Date;
+            var desde = fechaInicio.Value.Date;
+            var hasta = fechaFin.Value.Date;
             if (hasta <= desde)
                 return BadRequest(new
                 {
                     status = 400,
                     error = "Rango de fechas inválido",
-                    details = new[] { "fecha_salida debe ser mayor que fecha_inicio." },
+                    details = new[] { "fechaFin debe ser mayor que fechaInicio." },
                     timestamp = DateTime.UtcNow
                 });
         }
 
         var result = await _listing.ListarAsync(
-            sucursalGuid, tipo_habitacion_guid, fecha_inicio, fecha_salida, cancellationToken);
+            sucursalGuid, tipo_habitacion_guid, fechaInicio, fechaFin, cancellationToken);
         return Ok(result);
     }
 }

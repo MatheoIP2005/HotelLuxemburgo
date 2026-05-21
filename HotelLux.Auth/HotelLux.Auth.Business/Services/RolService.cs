@@ -52,7 +52,7 @@ public class RolService : IRolService
 
         var actor = ActorUsuarioGuid();
         _ = _auditEmitter.EmitAsync(
-            "rol",
+            "seguridad.rol",
             "CREATE",
             creado.RolGuid.ToString(),
             actor,
@@ -74,7 +74,7 @@ public class RolService : IRolService
 
         var actor = ActorUsuarioGuid();
         _ = _auditEmitter.EmitAsync(
-            "rol",
+            "seguridad.rol",
             "UPDATE",
             rolGuid.ToString(),
             actor,
@@ -98,7 +98,7 @@ public class RolService : IRolService
 
         var actor = ActorUsuarioGuid();
         _ = _auditEmitter.EmitAsync(
-            "rol",
+            "seguridad.rol",
             "DISABLE",
             rolGuid.ToString(),
             actor,
@@ -116,7 +116,7 @@ public class RolService : IRolService
 
         var actor = ActorUsuarioGuid();
         _ = _auditEmitter.EmitAsync(
-            "rol",
+            "seguridad.rol",
             "DELETE",
             rolGuid.ToString(),
             actor,

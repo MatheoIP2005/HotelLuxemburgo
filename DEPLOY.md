@@ -251,7 +251,7 @@ https://hotellux-gateway.onrender.com
 
 ### Test rápido desde el browser
 ```
-GET https://hotellux-gateway.onrender.com/api/v1/accommodations/search?destino=Quito&fecha_entrada=2026-06-01&fecha_salida=2026-06-05&num_adultos=2&num_habitaciones=1
+GET https://hotellux-gateway.onrender.com/api/v1/accommodations/search?destino=Quito&fechaInicio=2026-06-01&fechaFin=2026-06-05&num_adultos=2&num_habitaciones=1
 ```
 
 ---

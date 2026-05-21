@@ -32,7 +32,7 @@ public class CatalogoServiciosController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Crear([FromBody] CatalogoServicioCreateDTO dto, CancellationToken ct)
     {
         dto.CreadoPorUsuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -42,7 +42,7 @@ public class CatalogoServiciosController : ControllerBase
     }
 
     [HttpPut("{catalogoGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Actualizar(Guid catalogoGuid, [FromBody] CatalogoServicioUpdateDTO dto, CancellationToken ct)
     {
         dto.ModificadoPorUsuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -52,7 +52,7 @@ public class CatalogoServiciosController : ControllerBase
     }
 
     [HttpPatch("{catalogoGuid:guid}/desactivar")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Desactivar(Guid catalogoGuid, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";
@@ -61,7 +61,7 @@ public class CatalogoServiciosController : ControllerBase
     }
 
     [HttpDelete("{catalogoGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> Eliminar(Guid catalogoGuid, CancellationToken ct)
     {
         var usuario = User.FindFirst("username")?.Value ?? "api_user";

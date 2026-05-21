@@ -26,7 +26,7 @@ public class SucursalImagenesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     [ProducesResponseType(typeof(ApiResponse<SucursalImagenDTO>), StatusCodes.Status201Created)]
     public async Task<IActionResult> Crear(Guid sucursalGuid, [FromBody] SucursalImagenCreateDTO dto, CancellationToken ct)
     {
@@ -35,18 +35,8 @@ public class SucursalImagenesController : ControllerBase
         return StatusCode(StatusCodes.Status201Created, ApiResponse<SucursalImagenDTO>.Created(result));
     }
 
-    [HttpDelete("{imagenGuid:guid}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Eliminar(Guid sucursalGuid, Guid imagenGuid, CancellationToken ct)
-    {
-        await _service.EliminarAsync(sucursalGuid, imagenGuid, ct);
-        return NoContent();
-    }
-
-    /// <summary>Eliminar por id numérico (spec: DELETE .../imagenes/{idSucursalImagen}).</summary>
     [HttpDelete("{idSucursalImagen:int}")]
-    [Authorize(Roles = "ADMINISTRADOR")]
+    [Authorize(Roles = "ADMIN")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> EliminarPorId(Guid sucursalGuid, int idSucursalImagen, CancellationToken ct)
     {

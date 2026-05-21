@@ -55,4 +55,12 @@ public class TipoHabitacionCatalogoService : ITipoHabitacionCatalogoService
 
         await _dataService.RemoverAsync(tipo.IdTipoHabitacion, catalogo.IdCatalogo, ct);
     }
+
+    public async Task RemoverPorIdAsync(Guid tipoGuid, int idTipoHabCatalogo, CancellationToken ct = default)
+    {
+        var tipo = await _tipoDataService.ObtenerPorGuidAsync(tipoGuid, ct);
+        if (tipo is null) throw new NotFoundException("TipoHabitación", tipoGuid);
+
+        await _dataService.RemoverPorIdAsync(tipo.IdTipoHabitacion, idTipoHabCatalogo, ct);
+    }
 }

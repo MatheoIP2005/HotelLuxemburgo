@@ -29,6 +29,16 @@ function Start-ServiceWindow {
 
 Write-Host "HotelLux stack: raiz = $RepoRoot" -ForegroundColor Green
 
+$busy = @(5000, 5001, 5002, 5003) | Where-Object {
+    Get-NetTCPConnection -LocalPort $_ -State Listen -ErrorAction SilentlyContinue
+}
+if ($busy.Count -gt 0) {
+    Write-Host "Puertos en uso: $($busy -join ', '). Los servicios YA pueden estar corriendo." -ForegroundColor Yellow
+    Write-Host "  - Usa el stack actual: http://127.0.0.1:5000/swagger" -ForegroundColor Yellow
+    Write-Host "  - Para reiniciar limpio: .\scripts\Stop-HotelLuxPorts.ps1 y vuelve a ejecutar este script." -ForegroundColor Yellow
+    exit 0
+}
+
 dotnet build (Join-Path $RepoRoot "HotelLux.Stack.slnx") -v minimal
 if ($LASTEXITCODE -ne 0) { throw "dotnet build fallo." }
 
@@ -45,6 +55,6 @@ Start-ServiceWindow "HotelLux.Gateway (5000)" "HotelLux.Gateway\HotelLux.Gateway
 Write-Host ""
 Write-Host "Gateway publico: http://127.0.0.1:5000/health" -ForegroundColor Green
 Write-Host "Ejemplos (con servicios y BD en marcha):" -ForegroundColor Green
-Write-Host "  GET  http://127.0.0.1:5000/api/v1/accommodations/search?destino=...&fecha_entrada=...&fecha_salida=...&num_adultos=1&num_habitaciones=1"
+Write-Host "  GET  http://127.0.0.1:5000/api/v1/accommodations/search?destino=...&fechaInicio=...&fechaFin=...&num_adultos=1&num_habitaciones=1"
 Write-Host "  GET  http://127.0.0.1:5000/api/v1/accommodations/{sucursalGuid}"
 Write-Host ""

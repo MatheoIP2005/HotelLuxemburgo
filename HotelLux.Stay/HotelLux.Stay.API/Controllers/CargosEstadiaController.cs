@@ -23,7 +23,7 @@ public class CargosEstadiaController : ControllerBase
     }
 
     [HttpPatch("{cargoGuid:guid}/anular")]
-    [Authorize(Roles = "ADMINISTRADOR,RECEPCIONISTA")]
+    [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Anular(Guid cargoGuid, CancellationToken ct)
     {
         var usuario = User.Identity?.Name ?? "api_user";

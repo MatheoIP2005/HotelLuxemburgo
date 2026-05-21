@@ -2,7 +2,11 @@ using System.Security.Claims;
 
 namespace HotelLux.Reservation.Business;
 
-/// <summary>Reglas de acceso para usuarios con rol CLIENTE vinculados a un cliente (claim cliente_guid).</summary>
+/// <summary>
+/// Reglas de acceso para staff sobre clientes y sus reservas.
+/// En el modelo actual solo existen dos roles (ADMIN y VENDEDOR); ambos son staff con acceso pleno
+/// a los recursos de cliente. El claim opcional <c>cliente_guid</c> se conserva por compatibilidad.
+/// </summary>
 public static class ClienteSelfAccessHelper
 {
     public static Guid? TryGetClienteGuidClaim(ClaimsPrincipal user)
@@ -12,15 +16,10 @@ public static class ClienteSelfAccessHelper
     }
 
     public static bool EsStaff(ClaimsPrincipal user) =>
-        user.IsInRole("ADMINISTRADOR") || user.IsInRole("RECEPCIONISTA") || user.IsInRole("VENDEDOR");
+        user.IsInRole("ADMIN") || user.IsInRole("VENDEDOR");
 
-    public static bool PuedeVerCliente(ClaimsPrincipal user, Guid clienteGuid)
-    {
-        if (EsStaff(user)) return true;
-        if (!user.IsInRole("CLIENTE")) return false;
-        var cg = TryGetClienteGuidClaim(user);
-        return cg.HasValue && cg.Value == clienteGuid;
-    }
+    public static bool PuedeVerCliente(ClaimsPrincipal user, Guid clienteGuid) =>
+        EsStaff(user);
 
     public static bool PuedeVerReservaDeCliente(ClaimsPrincipal user, Guid reservaClienteGuid) =>
         PuedeVerCliente(user, reservaClienteGuid);

@@ -15,6 +15,10 @@ public class TipoHabitacionCatalogoRepository : ITipoHabitacionCatalogoRepositor
         => await _context.TipoHabitacionCatalogos
             .FirstOrDefaultAsync(x => x.IdTipoHabitacion == idTipo && x.IdCatalogo == idCatalogo, ct);
 
+    public async Task<TipoHabitacionCatalogoEntity?> ObtenerPorIdAsync(int idTipoHabCatalogo, CancellationToken ct = default)
+        => await _context.TipoHabitacionCatalogos
+            .FirstOrDefaultAsync(x => x.IdTipoHabCatalogo == idTipoHabCatalogo, ct);
+
     public async Task<IReadOnlyList<TipoHabitacionCatalogoEntity>> ListarPorTipoAsync(int idTipo, CancellationToken ct = default)
         => await _context.TipoHabitacionCatalogos.AsNoTracking()
             .Include(x => x.CatalogoServicio)

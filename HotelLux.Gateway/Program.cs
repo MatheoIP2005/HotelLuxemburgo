@@ -20,6 +20,7 @@ app.MapGet("/health", () => Results.Json(new
     status = "ok",
     service = "HotelLux.Gateway",
     documentation = "/swagger",
+    openapi = "/swagger/v1/swagger.json",
     utc = DateTime.UtcNow
 }));
 
