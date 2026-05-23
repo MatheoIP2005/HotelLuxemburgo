@@ -48,7 +48,7 @@ public class AuditGrpcEmitter : IAuditEmitter
                 DatosNuevosJson = string.IsNullOrWhiteSpace(detalleJson)
                     ? $"{{\"verbo\":\"{operacion}\"}}"
                     : $"{{\"verbo\":\"{operacion}\",\"detalle\":{detalleJson}}}",
-                FechaEventoIso = string.Empty
+                FechaEventoIso = DateTimeOffset.UtcNow.ToString("o")
             };
 
             await client.EmitAuditEventAsync(request, cancellationToken: cancellationToken);

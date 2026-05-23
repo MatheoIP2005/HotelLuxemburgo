@@ -16,7 +16,6 @@ public class ValoracionesController : ControllerBase
     private readonly IValoracionService _service;
     public ValoracionesController(IValoracionService service) => _service = service;
 
-    /// <summary>Listado paginado (operación interna).</summary>
     [HttpGet]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> ListarPaginado(
@@ -26,7 +25,6 @@ public class ValoracionesController : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { items, total, pagina, limite }));
     }
 
-    /// <summary>Lista las valoraciones de una estadía específica.</summary>
     [HttpGet("estadia/{estadiaGuid:guid}")]
     public async Task<IActionResult> ListarPorEstadia(Guid estadiaGuid, CancellationToken ct)
     {
@@ -34,7 +32,6 @@ public class ValoracionesController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<ValoracionDto>>.Ok(data));
     }
 
-    /// <summary>Obtiene una valoración por GUID.</summary>
     [HttpGet("{valoracionGuid:guid}")]
     public async Task<IActionResult> ObtenerPorGuid(Guid valoracionGuid, CancellationToken ct)
     {
@@ -44,7 +41,6 @@ public class ValoracionesController : ControllerBase
         return Ok(ApiResponse<ValoracionDto>.Ok(data));
     }
 
-    /// <summary>Marca la valoración como oculta (moderación).</summary>
     [HttpPatch("{valoracionGuid:guid}/moderar")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Moderar(Guid valoracionGuid, CancellationToken ct)
@@ -54,7 +50,6 @@ public class ValoracionesController : ControllerBase
         return Ok(ApiResponse<string>.Ok("Valoración ocultada."));
     }
 
-    /// <summary>Publica la respuesta del hotel a una valoración.</summary>
     [HttpPatch("{valoracionGuid:guid}/respuesta")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Responder(
@@ -70,14 +65,12 @@ public class ValoracionesController : ControllerBase
         return Ok(ApiResponse<ValoracionDto>.Ok(data!, "Respuesta registrada."));
     }
 
-    /// <summary>Alias spec: PATCH .../responder (mismo cuerpo que <c>respuesta</c>).</summary>
     [HttpPatch("{valoracionGuid:guid}/responder")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public Task<IActionResult> ResponderAlias(
         Guid valoracionGuid, [FromBody] ValoracionResponderDto dto, CancellationToken ct)
         => Responder(valoracionGuid, dto, ct);
 
-    /// <summary>Eliminación lógica (spec DELETE) — Admin.</summary>
     [HttpDelete("{valoracionGuid:guid}")]
     [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> Eliminar(Guid valoracionGuid, CancellationToken ct)
@@ -87,7 +80,6 @@ public class ValoracionesController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Crea una valoración para una estadía finalizada.</summary>
     [HttpPost]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Crear([FromBody] ValoracionCreateDto dto, CancellationToken ct)

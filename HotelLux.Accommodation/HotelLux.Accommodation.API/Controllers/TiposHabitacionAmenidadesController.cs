@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HotelLux.Accommodation.API.Controllers;
 
-/// <summary>Rutas alias <c>amenidades</c> equivalentes a <c>catalogo</c> en tipos de habitación (spec OpenAPI).</summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/internal/tipos-habitacion/{tipoHabitacionGuid:guid}/amenidades")]

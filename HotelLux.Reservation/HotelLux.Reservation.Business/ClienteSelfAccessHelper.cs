@@ -19,7 +19,7 @@ public static class ClienteSelfAccessHelper
         user.IsInRole("ADMIN") || user.IsInRole("VENDEDOR");
 
     public static bool PuedeVerCliente(ClaimsPrincipal user, Guid clienteGuid) =>
-        EsStaff(user);
+        EsStaff(user) || TryGetClienteGuidClaim(user) == clienteGuid;
 
     public static bool PuedeVerReservaDeCliente(ClaimsPrincipal user, Guid reservaClienteGuid) =>
         PuedeVerCliente(user, reservaClienteGuid);

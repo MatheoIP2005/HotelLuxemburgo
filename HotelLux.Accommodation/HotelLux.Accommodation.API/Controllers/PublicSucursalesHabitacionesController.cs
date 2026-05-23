@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HotelLux.Accommodation.API.Controllers;
 
-/// <summary>Spec: GET /api/v1/public/sucursales/{sucursalGuid}/habitaciones</summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/public/sucursales/{sucursalGuid:guid}/habitaciones")]

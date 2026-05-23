@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HotelLux.Reservation.API.Controllers;
 
-/// <summary>Spec: POST/GET /api/v1/public/reservas (endpoints_locales.txt). Cuerpo y respuesta planos.</summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/public/reservas")]

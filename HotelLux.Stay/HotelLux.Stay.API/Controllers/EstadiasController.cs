@@ -16,7 +16,6 @@ public class EstadiasController : ControllerBase
     private readonly IEstadiaService _estadia;
     public EstadiasController(IEstadiaService estadia) => _estadia = estadia;
 
-    /// <summary>Lista estadías con filtros opcionales de estado y sucursal.</summary>
     [HttpGet]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> Listar(
@@ -30,7 +29,6 @@ public class EstadiasController : ControllerBase
         return Ok(ApiResponse<object>.Ok(resultado));
     }
 
-    /// <summary>Registra el check-in de una reserva confirmada.</summary>
     [HttpPost("check-in")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> CheckIn([FromBody] CheckInDto dto, CancellationToken ct)
@@ -40,7 +38,6 @@ public class EstadiasController : ControllerBase
         return StatusCode(201, ApiResponse<EstadiaDto>.Created(data, "Check-in registrado."));
     }
 
-    /// <summary>Alias de check-in con la reserva en la ruta.</summary>
     [HttpPost("checkin/{reservaGuid:guid}")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> CheckInPorReserva(
@@ -56,7 +53,6 @@ public class EstadiasController : ControllerBase
         return StatusCode(201, ApiResponse<EstadiaDto>.Created(data, "Check-in registrado."));
     }
 
-    /// <summary>Registra el check-out de una estadía activa y genera factura final.</summary>
     [HttpPatch("{estadiaGuid:guid}/check-out")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> CheckOut(Guid estadiaGuid, CancellationToken ct)
@@ -66,13 +62,11 @@ public class EstadiasController : ControllerBase
         return Ok(ApiResponse<EstadiaDto>.Ok(data, "Check-out registrado."));
     }
 
-    /// <summary>Alias spec: PATCH .../checkout (mismo comportamiento que check-out).</summary>
     [HttpPatch("{estadiaGuid:guid}/checkout")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public Task<IActionResult> CheckOutSpecAlias(Guid estadiaGuid, CancellationToken ct)
         => CheckOut(estadiaGuid, ct);
 
-    /// <summary>Alias de check-out con el GUID de la estadía en el cuerpo.</summary>
     [HttpPatch("checkout")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> CheckOutPorBody([FromBody] CheckoutPorBodyDto body, CancellationToken ct)
@@ -82,7 +76,6 @@ public class EstadiasController : ControllerBase
         return Ok(ApiResponse<EstadiaDto>.Ok(data, "Check-out registrado."));
     }
 
-    /// <summary>Obtiene una estadía por su GUID.</summary>
     [HttpGet("{estadiaGuid:guid}")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> ObtenerPorGuid(Guid estadiaGuid, CancellationToken ct)
@@ -93,7 +86,6 @@ public class EstadiasController : ControllerBase
         return Ok(ApiResponse<EstadiaDto>.Ok(data));
     }
 
-    /// <summary>Marca o desmarca la habitación para mantenimiento al terminar la estadía.</summary>
     [HttpPatch("{estadiaGuid:guid}/mantenimiento")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> MarcarMantenimiento(Guid estadiaGuid, CancellationToken ct)

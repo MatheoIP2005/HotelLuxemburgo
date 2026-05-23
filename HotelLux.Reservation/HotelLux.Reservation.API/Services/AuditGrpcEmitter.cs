@@ -41,7 +41,7 @@ public class AuditGrpcEmitter : IAuditEmitter
                     IpOrigen = ipOrigen ?? string.Empty,
                     DatosAnterioresJson = datosAnterioresJson ?? string.Empty,
                     DatosNuevosJson = datosNuevosJson ?? string.Empty,
-                    FechaEventoIso = string.Empty
+                    FechaEventoIso = DateTimeOffset.UtcNow.ToString("o")
                 });
             }
             catch (Exception ex)

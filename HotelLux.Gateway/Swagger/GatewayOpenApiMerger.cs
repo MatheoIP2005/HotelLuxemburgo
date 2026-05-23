@@ -362,7 +362,7 @@ public sealed class GatewayOpenApiMerger
 
     private static string BuildDescription() =>
         """
-        API unificada del Gateway (`http://127.0.0.1:5000`).
+        API unificada del Gateway HotelLux.
 
         Secciones alineadas con `docs/endpoints_locales.txt`. Los **5 endpoints públicos** de `docs/endpoints_publicas.txt` aparecen aunque Accommodation/Reservation estén apagados. Recargá con Ctrl+F5.
         """;

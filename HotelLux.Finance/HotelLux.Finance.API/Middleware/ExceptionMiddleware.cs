@@ -29,6 +29,10 @@ public class ExceptionMiddleware
         {
             await WriteJson(context, 400, "Solicitud inválida", ex.Errors);
         }
+        catch (ConflictException ex)
+        {
+            await WriteJson(context, 409, "Conflicto", new[] { ex.Message });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error no controlado");

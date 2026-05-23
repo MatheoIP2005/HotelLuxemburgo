@@ -45,13 +45,24 @@ public class HabitacionRepository : IHabitacionRepository
             .OrderBy(x => x.NumeroHabitacion)
             .ToListAsync(ct);
 
+    /// <summary>
+    /// Devuelve habitaciones en estado DIS para la sucursal indicada.
+    /// Los parámetros <paramref name="inicio"/> y <paramref name="fin"/> están reservados
+    /// para futura integración con el servicio Reservation vía gRPC.
+    /// La disponibilidad real por fechas debe validarse en HotelLux.Reservation.
+    /// </summary>
     public async Task<IReadOnlyList<HabitacionEntity>> ListarDisponiblesAsync(int idSucursal, DateOnly inicio, DateOnly fin, CancellationToken ct = default)
-        => await _context.Habitaciones.AsNoTracking()
+    {
+        if (fin <= inicio)
+            throw new ArgumentException("La fecha de fin debe ser posterior a la fecha de inicio.", nameof(fin));
+
+        return await _context.Habitaciones.AsNoTracking()
             .Include(h => h.Sucursal)
             .Include(h => h.TipoHabitacion)
             .Where(x => x.IdSucursal == idSucursal && !x.EsEliminado && x.EstadoHabitacion == "DIS")
             .OrderBy(x => x.NumeroHabitacion)
             .ToListAsync(ct);
+    }
 
     public async Task AgregarAsync(HabitacionEntity entity, CancellationToken ct = default)
         => await _context.Habitaciones.AddAsync(entity, ct);

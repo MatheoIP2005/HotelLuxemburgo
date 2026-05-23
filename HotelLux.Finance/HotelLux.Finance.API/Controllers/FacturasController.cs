@@ -70,7 +70,6 @@ public class FacturasController : ControllerBase
         }
     }
 
-    /// <summary>Genera factura FINAL y registra un pago en efectivo simulado aprobado en cadena.</summary>
     [HttpPost("final-y-pago-simulado/{reservaGuid:guid}")]
     [Authorize(Roles = "ADMIN,VENDEDOR")]
     public async Task<IActionResult> FinalYPagoSimulado(

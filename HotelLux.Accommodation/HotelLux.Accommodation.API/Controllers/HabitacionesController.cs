@@ -44,7 +44,6 @@ public class HabitacionesController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<HabitacionDTO>>.Ok(result, "Disponibilidad consultada exitosamente."));
     }
 
-    /// <summary>Alias de spec: GET .../habitaciones/disponibles (mismos parámetros que disponibilidad).</summary>
     [HttpGet("disponibles")]
     public Task<IActionResult> Disponibles(
         [FromQuery] Guid sucursalGuid,

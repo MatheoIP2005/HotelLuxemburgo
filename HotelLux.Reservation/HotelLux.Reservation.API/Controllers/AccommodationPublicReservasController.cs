@@ -7,10 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HotelLux.Reservation.API.Controllers;
 
-/// <summary>
-/// Rutas públicas del marketplace según endpoints_publicas.txt: solo prefijo <c>accomodations</c>.
-/// Cuerpo y respuesta JSON coinciden con el contrato (sin envoltorio ApiResponse).
-/// </summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/accommodations/reservas")]

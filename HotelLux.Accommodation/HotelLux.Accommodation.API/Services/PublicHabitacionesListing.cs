@@ -54,13 +54,10 @@ public sealed class PublicHabitacionesListing
             .ToListAsync(cancellationToken);
         var tipoPorGuid = tipoInfo.ToDictionary(x => x.TipoHabitacionGuid);
 
-        var enRango = fechaInicio.HasValue && fechaFin.HasValue;
         return habitaciones.Select(h =>
         {
             tipoPorGuid.TryGetValue(h.TipoHabitacionGuid, out var ti);
-            var disponibleEnRango = enRango
-                ? string.Equals(h.EstadoHabitacion, "DIS", StringComparison.Ordinal)
-                : string.Equals(h.EstadoHabitacion, "DIS", StringComparison.Ordinal);
+            var disponibleEnRango = string.Equals(h.EstadoHabitacion, "DIS", StringComparison.Ordinal);
             return new HabitacionPublicListItemResponse
             {
                 HabitacionGuid = h.HabitacionGuid,

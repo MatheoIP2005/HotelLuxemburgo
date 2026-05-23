@@ -15,7 +15,6 @@ public class InternalImagesController : ControllerBase
 
     public InternalImagesController(IWebHostEnvironment env) => _env = env;
 
-    /// <summary>Sube un archivo binario y devuelve la URL pública bajo /files/…</summary>
     [HttpPost("upload")]
     [RequestFormLimits(MultipartBodyLengthLimit = 10_485_760)]
     [RequestSizeLimit(10_485_760)]
