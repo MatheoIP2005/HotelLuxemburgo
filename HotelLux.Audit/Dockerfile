@@ -17,6 +17,7 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV PORT=8080
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "HotelLux.Audit.API.dll"]

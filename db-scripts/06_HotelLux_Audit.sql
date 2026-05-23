@@ -25,12 +25,7 @@
 --   Tablas: evento_auditoria
 --   Datos semilla: 13 eventos representativos del flujo end-to-end
 --                  ya sembrado en las otras 5 BDs.
---
--- INSTRUCCIONES EN pgAdmin:
---   1. Create Database: HotelLux_Audit
---   2. Query Tool -> Open file -> F5
 -- ============================================================
-
 
 -- ============================================================
 -- SCHEMA
