@@ -13,6 +13,7 @@ public class AccommodationGrpcClient : IAccommodationClient
 {
     private readonly GrpcChannel _channel;
     private readonly HttpClient? _restClient;
+    private readonly string? _fallbackKey;
     private readonly ILogger<AccommodationGrpcClient> _logger;
 
     public AccommodationGrpcClient(IConfiguration config, ILogger<AccommodationGrpcClient> logger)
@@ -22,6 +23,8 @@ public class AccommodationGrpcClient : IAccommodationClient
         var handler = new SocketsHttpHandler { EnableMultipleHttp2Connections = true };
         _channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions { HttpHandler = handler });
         _restClient = CreateRestClient(config, address);
+        _fallbackKey = config["AccommodationService:FallbackKey"]
+            ?? config["InternalService:FallbackKey"];
         _logger = logger;
     }
 
@@ -142,8 +145,10 @@ public class AccommodationGrpcClient : IAccommodationClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "ConfirmRoomLock error habitacion={Hab} reserva={Res}", habitacionGuid, reservaGuid);
-            return false;
+            _logger.LogError(ex,
+                "ConfirmRoomLock gRPC error habitacion={Hab} reserva={Res}. Intentando fallback REST.",
+                habitacionGuid, reservaGuid);
+            return await CambiarEstadoRestFallbackAsync(habitacionGuid, "OCU", ct);
         }
     }
 
@@ -163,8 +168,10 @@ public class AccommodationGrpcClient : IAccommodationClient
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "ReleaseRoomLock error habitacion={Hab} reserva={Res}", habitacionGuid, reservaGuid);
-            return false;
+            _logger.LogWarning(ex,
+                "ReleaseRoomLock gRPC error habitacion={Hab} reserva={Res}. Intentando fallback REST.",
+                habitacionGuid, reservaGuid);
+            return await CambiarEstadoRestFallbackAsync(habitacionGuid, "DIS", ct);
         }
     }
 
@@ -240,6 +247,43 @@ public class AccommodationGrpcClient : IAccommodationClient
                 "CheckAvailability REST fallback error sucursal={Sucursal} tipo={Tipo}",
                 sucursalGuid, tipoHabitacionGuid);
             return Array.Empty<HabitacionDisponibleInfo>();
+        }
+    }
+
+    private async Task<bool> CambiarEstadoRestFallbackAsync(
+        Guid habitacionGuid,
+        string nuevoEstado,
+        CancellationToken ct)
+    {
+        if (_restClient is null || string.IsNullOrWhiteSpace(_fallbackKey))
+            return false;
+
+        try
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Patch,
+                $"api/v1/internal/render-fallback/habitaciones/{habitacionGuid}/estado");
+
+            request.Headers.TryAddWithoutValidation("X-Internal-Service-Key", _fallbackKey);
+            request.Content = JsonContent.Create(new { nuevoEstado });
+
+            using var response = await _restClient.SendAsync(request, ct);
+            if (response.IsSuccessStatusCode)
+                return true;
+
+            var body = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogWarning(
+                "Fallback REST cambio estado fallo habitacion={Hab} estado={Estado} status={Status} body={Body}",
+                habitacionGuid, nuevoEstado, (int)response.StatusCode, body);
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Fallback REST cambio estado error habitacion={Hab} estado={Estado}",
+                habitacionGuid, nuevoEstado);
+            return false;
         }
     }
 
