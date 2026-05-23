@@ -332,7 +332,7 @@ public class AccommodationsController : ControllerBase
             PrecioBase = t.PrecioBase ?? 0m,
             Imagenes = t.Imagenes,
             DisponiblesEnRango = disponiblesPorTipo is null
-                ? null
+                ? 0
                 : disponiblesPorTipo.GetValueOrDefault(t.TipoHabitacionGuid, 0)
         }).ToList();
 
@@ -345,8 +345,8 @@ public class AccommodationsController : ControllerBase
                 Nombre = t.NombreTarifa,
                 PrecioPorNoche = t.PrecioPorNoche,
                 Moneda = "USD",
-                FechaInicio = t.FechaInicio,
-                FechaFin = t.FechaFin,
+                FechaInicio = ToUtcDateTimeOffset(t.FechaInicio),
+                FechaFin = ToUtcDateTimeOffset(t.FechaFin),
                 MinNoches = t.MinNoches,
                 TipoHabitacionGuid = t.TipoHabitacion.TipoHabitacionGuid
             })
@@ -370,22 +370,6 @@ public class AccommodationsController : ControllerBase
                 h.IdSucursal == sucursal.IdSucursal
                 && h.EstadoHabitacion == "DIS"
                 && !h.EsEliminado, cancellationToken);
-
-        AccommodationAvailabilityDto? disponibilidad = null;
-        if (fechaInicio.HasValue && fechaFin.HasValue && disponiblesPorTipo is not null)
-        {
-            disponibilidad = new AccommodationAvailabilityDto
-            {
-                FechaEntrada = fechaInicio,
-                FechaSalida = fechaFin,
-                PorTipoHabitacion = tiposHabitacion.Select(t => new AvailabilityByRoomTypeDto
-                {
-                    TipoHabitacionGuid = t.TipoHabitacionGuid,
-                    Nombre = t.Nombre,
-                    Disponibles = t.DisponiblesEnRango ?? 0
-                }).ToList()
-            };
-        }
 
         return Ok(new AccommodationDetailResponse
         {
@@ -423,8 +407,7 @@ public class AccommodationsController : ControllerBase
                 AceptaNinos = sucursal.AceptaNinos,
                 PermiteMascotas = sucursal.PermiteMascotas,
                 Politicas = "Según condiciones de la tarifa seleccionada"
-            },
-            Disponibilidad = disponibilidad
+            }
         });
     }
 
@@ -480,4 +463,7 @@ public class AccommodationsController : ControllerBase
             TieneAnterior = pagina > 1
         });
     }
+
+    private static DateTimeOffset ToUtcDateTimeOffset(DateOnly date) =>
+        new(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
 }

@@ -27,6 +27,8 @@ public sealed class GatewayOpenApiSchemaNormalizer
         ["InhabilitarDto"] = "DeleteRequest",
         ["ReservaDTO"] = "ReservaResponse",
         ["ReservaCreateDTO"] = "CrearReservaRequest",
+        ["CrearReservaPublicRequest"] = "CrearReservaPublicRequest",
+        ["ReservaHabitacionPublicRequest"] = "ReservaHabitacionPublicRequest",
         ["ReservaHabitacionDTO"] = "ReservaHabitacionResponse",
         ["ReservaHabitacionCreateDTO"] = "ReservaHabitacionRequest",
         ["ReservaFiltroDTO"] = "ReservaResponse",
@@ -266,7 +268,7 @@ public sealed class GatewayOpenApiSchemaNormalizer
             or "imagenes" or "serviciosdestacados" or "errors" or "data")
             return new JsonObject { ["type"] = "array", ["items"] = new JsonObject() };
         if (lower is "disponiblesenrango")
-            return new JsonObject { ["type"] = "integer", ["format"] = "int32", ["nullable"] = true };
+            return new JsonObject { ["type"] = "integer", ["format"] = "int32" };
 
         return new JsonObject { ["type"] = "string" };
     }

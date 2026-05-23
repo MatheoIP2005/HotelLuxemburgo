@@ -89,7 +89,7 @@ public sealed class GatewayPublicasDocCatalog
 
     private static string? ResolveRequestSchema(string method, string path) => (method, path) switch
     {
-        ("POST", "/api/v1/accommodations/reservas") => "CrearReservaRequest",
+        ("POST", "/api/v1/accommodations/reservas") => "CrearReservaPublicRequest",
         _ => null
     };
 

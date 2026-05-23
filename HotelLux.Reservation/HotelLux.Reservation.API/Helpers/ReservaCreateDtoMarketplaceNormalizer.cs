@@ -3,7 +3,7 @@ using HotelLux.Reservation.Business.DTOs.Reserva;
 namespace HotelLux.Reservation.API.Helpers;
 
 /// <summary>
-/// Completa importes y líneas cuando el cliente envía el cuerpo con ceros según endpoints_publicas.txt
+/// Completa fechas de línea e importes cuando el cliente envía el cuerpo según endpoints_publicas.txt
 /// (precio/total opcionales en el contrato público).
 /// </summary>
 public static class ReservaCreateDtoMarketplaceNormalizer
@@ -15,6 +15,11 @@ public static class ReservaCreateDtoMarketplaceNormalizer
 
         foreach (var h in dto.Habitaciones)
         {
+            if (h.FechaInicio == default)
+                h.FechaInicio = dto.FechaInicio;
+            if (h.FechaFin == default)
+                h.FechaFin = dto.FechaFin;
+
             var nights = Math.Max(1, h.FechaFin.DayNumber - h.FechaInicio.DayNumber);
 
             if (h.PrecioNocheAplicado <= 0)

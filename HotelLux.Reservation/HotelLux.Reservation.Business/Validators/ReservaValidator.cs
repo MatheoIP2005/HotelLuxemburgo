@@ -38,8 +38,13 @@ public static class ReservaValidator
 
         foreach (var hab in dto.Habitaciones)
         {
-            if (hab.HabitacionGuid == Guid.Empty)
-                errors.Add("Cada habitación debe tener un HabitacionGuid válido.");
+            var resueltaPorTipo = hab.HabitacionGuid == Guid.Empty
+                && hab.TipoHabitacionGuid.HasValue
+                && hab.TipoHabitacionGuid.Value != Guid.Empty;
+
+            if (hab.HabitacionGuid == Guid.Empty && !resueltaPorTipo)
+                errors.Add("Cada habitación debe tener habitacionGuid o tipoHabitacionGuid.");
+
             if (hab.FechaFin <= hab.FechaInicio)
                 errors.Add("FechaFin de habitación debe ser posterior a FechaInicio.");
             if (hab.PrecioNocheAplicado <= 0)

@@ -392,7 +392,6 @@ tarifasActivas	[...]
 amenities	[...]
 imagenes	[...]
 politicas	AccommodationPolicyDto{...}
-disponibilidad	AccommodationAvailabilityDto{...}
 }
 AccommodationPolicyDto{
 horaCheckIn	[...]
@@ -819,6 +818,7 @@ fechaInicio	[...]
 fechaFin	[...]
 origenCanalReserva	[...]
 observaciones	[...]
+esWalkin	[...]
 cliente	ClientePublicRequest{...}
 habitaciones	[...]
 }
@@ -1209,19 +1209,21 @@ message	[...]
 ReservaPublicDto{
 reservaGuid	[...]
 codigoReserva	[...]
-estadoReserva	[...]
-sucursalGuid	[...]
 clienteGuid	[...]
+sucursalGuid	[...]
 fechaReservaUtc	[...]
 fechaInicio	[...]
 fechaFin	[...]
-origenCanalReserva	[...]
-observaciones	[...]
 subtotalReserva	[...]
 valorIva	[...]
 totalReserva	[...]
-descuentoAplicado	[...]
 saldoPendiente	[...]
+origenCanalReserva	[...]
+estadoReserva	[...]
+fechaConfirmacionUtc	[...]
+fechaCancelacionUtc	[...]
+motivoCancelacion	[...]
+observaciones	[...]
 habitaciones	[...]
 }
 ReservaResponse{

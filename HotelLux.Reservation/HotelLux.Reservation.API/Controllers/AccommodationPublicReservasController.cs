@@ -2,6 +2,7 @@ using Asp.Versioning;
 using HotelLux.Reservation.API.Helpers;
 using HotelLux.Reservation.Business.DTOs.Reserva;
 using HotelLux.Reservation.Business.Interfaces;
+using HotelLux.Reservation.Business.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,22 +14,24 @@ namespace HotelLux.Reservation.API.Controllers;
 public class AccommodationPublicReservasController : ControllerBase
 {
     private readonly IReservaService _service;
+    private readonly IAccommodationClient _accommodation;
     private readonly ILogger<AccommodationPublicReservasController> _logger;
 
     public AccommodationPublicReservasController(
         IReservaService service,
+        IAccommodationClient accommodation,
         ILogger<AccommodationPublicReservasController> logger)
     {
         _service = service;
+        _accommodation = accommodation;
         _logger = logger;
     }
 
     [HttpPost]
     [AllowAnonymous]
-    public async Task<IActionResult> CrearYConfirmar([FromBody] ReservaCreateDTO dto, CancellationToken ct)
+    public async Task<IActionResult> CrearYConfirmar([FromBody] CrearReservaPublicRequest request, CancellationToken ct)
     {
-        if ((!dto.ClienteGuid.HasValue || dto.ClienteGuid == Guid.Empty) && dto.Cliente is null)
-            return BadRequest(new { status = 400, error = "Se requiere clienteGuid o un objeto cliente." });
+        var dto = await PublicReservaCreateMapper.ToInternalAsync(request, _accommodation, ct);
 
         dto.CreadoPorUsuario ??= "portal_publico";
         dto.CreadoDesdeIp ??= HttpContext.Connection.RemoteIpAddress?.ToString();

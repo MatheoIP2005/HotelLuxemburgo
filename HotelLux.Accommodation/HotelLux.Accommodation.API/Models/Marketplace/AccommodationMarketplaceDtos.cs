@@ -42,7 +42,7 @@ public sealed class AccommodationRoomTypeDto
     public decimal AreaM2 { get; set; }
     public decimal PrecioBase { get; set; }
     public IList<string>? Imagenes { get; set; }
-    public int? DisponiblesEnRango { get; set; }
+    public int DisponiblesEnRango { get; set; }
 }
 
 public sealed class AccommodationTariffDto
@@ -51,8 +51,8 @@ public sealed class AccommodationTariffDto
     public string? Nombre { get; set; }
     public decimal PrecioPorNoche { get; set; }
     public string? Moneda { get; set; }
-    public DateOnly FechaInicio { get; set; }
-    public DateOnly FechaFin { get; set; }
+    public DateTimeOffset FechaInicio { get; set; }
+    public DateTimeOffset FechaFin { get; set; }
     public int MinNoches { get; set; }
     public Guid TipoHabitacionGuid { get; set; }
 }
@@ -122,7 +122,6 @@ public sealed class AccommodationDetailResponse
     public IList<string>? Amenities { get; set; }
     public IList<string>? Imagenes { get; set; }
     public AccommodationPolicyDto? Politicas { get; set; }
-    public AccommodationAvailabilityDto? Disponibilidad { get; set; }
 }
 
 public sealed class AccommodationReviewDto
