@@ -92,7 +92,7 @@ public sealed class GatewayOpenApiSchemaNormalizer
 
         foreach (var key in rawPrefixedSchemas.Select(p => p.Key))
         {
-            var localName = key.Contains('_') ? key[(key.IndexOf('_') + 1)..] : key;
+            var localName = ExtractLocalSchemaName(key);
             if (_catalog.TryGet(localName, out _))
             {
                 map[key] = localName;
@@ -295,11 +295,13 @@ public sealed class GatewayOpenApiSchemaNormalizer
                         obj["$ref"] = $"#/components/schemas/{mapped}";
                     else
                     {
-                        var local = schemaName.Contains('_')
-                            ? schemaName[(schemaName.IndexOf('_') + 1)..]
-                            : schemaName;
+                        var local = ExtractLocalSchemaName(schemaName);
                         if (TypeAliases.TryGetValue(local, out var mappedLocal))
                             obj["$ref"] = $"#/components/schemas/{mappedLocal}";
+                        else if (aliasToCanonical.TryGetValue(local, out var canonicalLocal))
+                            obj["$ref"] = $"#/components/schemas/{canonicalLocal}";
+                        else if (TypeAliases.TryGetValue(schemaName, out var mappedFull))
+                            obj["$ref"] = $"#/components/schemas/{mappedFull}";
                     }
                 }
 
@@ -312,5 +314,18 @@ public sealed class GatewayOpenApiSchemaNormalizer
                     RewriteRefs(item, aliasToCanonical);
                 break;
         }
+    }
+
+    private static string ExtractLocalSchemaName(string schemaName)
+    {
+        var local = schemaName.Contains('_')
+            ? schemaName[(schemaName.IndexOf('_') + 1)..]
+            : schemaName;
+
+        var lastDot = local.LastIndexOf('.');
+        if (lastDot >= 0 && lastDot < local.Length - 1)
+            local = local[(lastDot + 1)..];
+
+        return local;
     }
 }
