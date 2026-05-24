@@ -1,6 +1,9 @@
 using HotelLux.Gateway.Swagger;
+using HotelLux.Shared.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureHotelLuxKestrel(builder.Environment, defaultHttpPort: 5000, defaultGrpcPort: 5000);
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));

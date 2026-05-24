@@ -349,7 +349,9 @@ public sealed class GatewayOpenApiMerger
     private string GetGatewayServerUrl()
     {
         // En producción usar la URL pública configurada como variable de entorno
-        var publicUrl = _config["Gateway:PublicUrl"] ?? _config["Gateway__PublicUrl"];
+        var publicUrl = _config["Gateway:PublicUrl"]
+            ?? _config["Gateway__PublicUrl"]
+            ?? _config["RENDER_EXTERNAL_URL"];
         if (!string.IsNullOrWhiteSpace(publicUrl))
             return publicUrl.TrimEnd('/');
 

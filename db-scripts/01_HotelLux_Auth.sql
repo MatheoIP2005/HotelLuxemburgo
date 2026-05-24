@@ -1,89 +1,84 @@
 -- ============================================================
 -- HOTEL LUXEMBURGO -- Microservicio AUTH
 -- Base de datos: HotelLux_Auth
--- Motor: PostgreSQL 18
--- Version: 2.0
---
--- DEPENDENCIAS: ninguna (es la primera BD a crear)
 --
 -- CONTENIDO:
 --   Schema: seguridad
 --   Tablas: rol, usuario_app, usuarios_roles
---   Datos semilla:
---     2 roles  : ADMIN (CRUD completo), VENDEDOR (sin DELETE)
+--
+--   Datos fijos (definidos por el sistema):
+--     2 roles   : ADMIN (CRUD completo), VENDEDOR (sin DELETE)
 --     2 usuarios: admin / vendedor
 --     2 asignaciones rol-usuario
 --
--- INSTRUCCIONES DE EJECUCION EN pgAdmin:
---   1. Click derecho sobre 'Databases' -> Create -> Database...
---      Database: HotelLux_Auth
---      Owner: postgres
---      Encoding: UTF8
---      Click Save.
---   2. Click derecho sobre la BD HotelLux_Auth -> Query Tool
---   3. Abrir este archivo (File -> Open) y ejecutar (F5).
---   4. Verificar al final los SELECT de conteo retornen
---      2 roles, 2 usuarios, 2 asignaciones.
---
--- CONTRASENAS (BCrypt cost 11, listas para usar):
---   admin    -> admin1234
---   vendedor -> vendedor1234
+-- NOTA ARQUITECTURA:
+--   cliente_guid en usuario_app se llena via bus de eventos / gRPC
+--   cuando un usuario del portal se vincula a un cliente en
+--   HotelLux_Reservation. No se carga en este script.
 -- ============================================================
-
 
 -- ============================================================
 -- SCHEMA
 -- ============================================================
 CREATE SCHEMA IF NOT EXISTS seguridad;
 
-
 -- ============================================================
 -- TABLA: seguridad.rol
+--
+-- Almacena los roles del sistema. Cada rol define un conjunto
+-- de permisos sobre los recursos. Los roles se asignan a
+-- usuarios mediante la tabla usuarios_roles.
 -- ============================================================
 CREATE TABLE seguridad.rol (
-    id_rol                   INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    rol_guid                 UUID NOT NULL DEFAULT gen_random_uuid(),
-    nombre_rol               VARCHAR(50)  NOT NULL,
+    id_rol                   INT          GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    rol_guid                 UUID         NOT NULL DEFAULT gen_random_uuid(),
+    nombre_rol               CHAR(20)     NOT NULL,
     descripcion_rol          VARCHAR(250) NULL,
     estado_rol               CHAR(3)      NOT NULL DEFAULT 'ACT',
     es_eliminado             BOOLEAN      NOT NULL DEFAULT FALSE,
     activo                   BOOLEAN      NOT NULL DEFAULT TRUE,
     fecha_inhabilitacion_utc TIMESTAMPTZ  NULL,
-    motivo_inhabilitacion    VARCHAR(250) NULL,
+    motivo_inhabilitacion    VARCHAR(150) NULL,
     fecha_registro_utc       TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    creado_por_usuario       VARCHAR(100) NOT NULL,
-    modificado_por_usuario   VARCHAR(100) NULL,
+    creado_por_usuario       CHAR(30)     NOT NULL,
+    modificado_por_usuario   CHAR(30)     NULL,
     fecha_modificacion_utc   TIMESTAMPTZ  NULL,
-    modificacion_ip          VARCHAR(45)  NULL,
-    CONSTRAINT uq_rol_guid    UNIQUE (rol_guid),
-    CONSTRAINT uq_rol_nombre  UNIQUE (nombre_rol),
+    modificacion_ip          CHAR(25)     NULL,
+    CONSTRAINT uq_rol_guid   UNIQUE (rol_guid),
+    CONSTRAINT uq_rol_nombre UNIQUE (nombre_rol),
     CONSTRAINT chk_rol_estado CHECK (estado_rol IN ('ACT','INA'))
 );
 
 
 -- ============================================================
 -- TABLA: seguridad.usuario_app
+--
+-- Almacena los usuarios del sistema (staff interno y clientes
+-- del portal). El campo cliente_guid se llena via bus de
+-- eventos / gRPC cuando el usuario se vincula a un cliente
+-- en HotelLux_Reservation. Permanece NULL para usuarios
+-- de staff (admin, vendedor).
 -- ============================================================
 CREATE TABLE seguridad.usuario_app (
-    id_usuario               INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_usuario               INT          GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     usuario_guid             UUID         NOT NULL DEFAULT gen_random_uuid(),
-    cliente_guid             UUID         NULL,
-    username                 VARCHAR(50)  NOT NULL,
-    correo                   VARCHAR(120) NOT NULL,
-    nombres                  VARCHAR(120) NOT NULL,
-    apellidos                VARCHAR(120) NULL,
+    cliente_guid             UUID         NULL,    -- vinculado via bus de eventos / gRPC desde HotelLux_Reservation
+    username                 CHAR(15)     NOT NULL,
+    correo                   CHAR(120)    NOT NULL,
+    nombres                  VARCHAR(30)  NOT NULL,
+    apellidos                VARCHAR(30)  NULL,
     password_hash            VARCHAR(500) NOT NULL,
     password_salt            VARCHAR(250) NOT NULL,
     estado_usuario           CHAR(3)      NOT NULL DEFAULT 'ACT',
     es_eliminado             BOOLEAN      NOT NULL DEFAULT FALSE,
     activo                   BOOLEAN      NOT NULL DEFAULT TRUE,
     fecha_inhabilitacion_utc TIMESTAMPTZ  NULL,
-    motivo_inhabilitacion    VARCHAR(250) NULL,
+    motivo_inhabilitacion    VARCHAR(150) NULL,
     fecha_registro_utc       TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    creado_por_usuario       VARCHAR(100) NOT NULL,
-    modificado_por_usuario   VARCHAR(100) NULL,
+    creado_por_usuario       CHAR(30)     NOT NULL,
+    modificado_por_usuario   CHAR(30)     NULL,
     fecha_modificacion_utc   TIMESTAMPTZ  NULL,
-    modificacion_ip          VARCHAR(45)  NULL,
+    modificacion_ip          CHAR(25)     NULL,
     CONSTRAINT uq_usuario_app_guid     UNIQUE (usuario_guid),
     CONSTRAINT uq_usuario_app_username UNIQUE (username),
     CONSTRAINT uq_usuario_app_correo   UNIQUE (correo),
@@ -93,19 +88,24 @@ CREATE TABLE seguridad.usuario_app (
 
 -- ============================================================
 -- TABLA: seguridad.usuarios_roles (N:M)
+--
+-- Tabla de union entre usuario_app y rol. Un usuario puede
+-- tener multiples roles. Las referencias a id_usuario e
+-- id_rol son FK fisicas dentro de esta misma BD; la
+-- sincronizacion con otras BDs se hace via bus / gRPC.
 -- ============================================================
 CREATE TABLE seguridad.usuarios_roles (
-    id_usuario_rol           INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    id_usuario               INT          NOT NULL,
-    id_rol                   INT          NOT NULL,
-    estado_usuario_rol       CHAR(3)      NOT NULL DEFAULT 'ACT',
-    es_eliminado             BOOLEAN      NOT NULL DEFAULT FALSE,
-    activo                   BOOLEAN      NOT NULL DEFAULT TRUE,
-    fecha_registro_utc       TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    creado_por_usuario       VARCHAR(100) NOT NULL,
-    modificado_por_usuario   VARCHAR(100) NULL,
-    fecha_modificacion_utc   TIMESTAMPTZ  NULL,
-    modificacion_ip          VARCHAR(45)  NULL,
+    id_usuario_rol           INT         GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_usuario               INT         NOT NULL,  -- FK a seguridad.usuario_app; sincronizado via bus/gRPC
+    id_rol                   INT         NOT NULL,  -- FK a seguridad.rol; sincronizado via bus/gRPC
+    estado_usuario_rol       CHAR(3)     NOT NULL DEFAULT 'ACT',
+    es_eliminado             BOOLEAN     NOT NULL DEFAULT FALSE,
+    activo                   BOOLEAN     NOT NULL DEFAULT TRUE,
+    fecha_registro_utc       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado_por_usuario       CHAR(30)    NOT NULL,
+    modificado_por_usuario   CHAR(30)    NULL,
+    fecha_modificacion_utc   TIMESTAMPTZ NULL,
+    modificacion_ip          CHAR(25)    NULL,
     CONSTRAINT uq_usuarios_roles UNIQUE (id_usuario, id_rol),
     CONSTRAINT fk_usuarios_roles_usuario FOREIGN KEY (id_usuario)
         REFERENCES seguridad.usuario_app(id_usuario) ON DELETE CASCADE,
@@ -130,19 +130,21 @@ CREATE INDEX ix_rol_estado
 
 
 -- ============================================================
--- DATOS SEMILLA
---
--- ESQUEMA DE GUIDs:
---   Prefijo 22xxxxxx-... = roles    (rol_guid)
---   Prefijo 21xxxxxx-... = usuarios (usuario_guid)
+-- ============================================================
+-- DATOS DEL SISTEMA
+-- ============================================================
 -- ============================================================
 
 
 -- ============================================================
 -- ROLES
 --
--- ADMIN   -> puede hacer CREATE, READ, UPDATE y DELETE
--- VENDEDOR -> puede hacer CREATE, READ y UPDATE (sin DELETE)
+-- ESQUEMA DE GUIDs:
+--   Prefijo 22xxxxxx-... = roles (rol_guid)
+--
+-- ADMIN    -> CREATE, READ, UPDATE, DELETE sobre todos los
+--             recursos del sistema.
+-- VENDEDOR -> CREATE, READ, UPDATE. Sin permiso de DELETE.
 -- ============================================================
 INSERT INTO seguridad.rol (
     rol_guid,
@@ -153,23 +155,31 @@ INSERT INTO seguridad.rol (
 (
     '22222222-2222-2222-2222-222222222001',
     'ADMIN',
-    'Administrador general. Permisos: CREATE, READ, UPDATE, DELETE sobre todos los recursos del sistema.',
+    'Administrador general del sistema. Permisos completos: CREATE, READ, UPDATE y DELETE sobre todos los recursos.',
     'system'
 ),
 (
     '22222222-2222-2222-2222-222222222002',
     'VENDEDOR',
-    'Personal de recepcion y ventas. Permisos: CREATE, READ, UPDATE. No puede eliminar registros.',
+    'Personal de recepcion y ventas. Permisos: CREATE, READ, UPDATE. No puede eliminar registros del sistema.',
     'system'
 );
 
 
 -- ============================================================
--- USUARIOS
+-- USUARIOS DEL SISTEMA
+--
+-- ESQUEMA DE GUIDs:
+--   Prefijo 21xxxxxx-... = usuarios (usuario_guid)
 --
 -- Contrasenas hasheadas con BCrypt cost 11:
 --   admin    -> admin1234
 --   vendedor -> vendedor1234
+--
+-- NOTA: cliente_guid = NULL para usuarios de staff.
+--       Se llena via bus de eventos / gRPC unicamente
+--       cuando el usuario esta vinculado a un cliente
+--       registrado en HotelLux_Reservation.
 -- ============================================================
 INSERT INTO seguridad.usuario_app (
     usuario_guid,
@@ -189,8 +199,8 @@ INSERT INTO seguridad.usuario_app (
     'admin@hotelluxemburgo.com',
     'Administrador',
     'Sistema',
-    '$2b$11$v94uNRF3DUsZz7ooOGUB7OoffuU2BfDumNiweoRRA8jUIcXPplm9m',
-    '$2b$11$v94uNRF3DUsZz7ooOGUB7O',
+    '$2a$12$Z2Gvfmfvp8xxdByGHmgPY.5gpMvE/SQ2MpJt86bl4q3Wv6df9sYBq',
+    '$2a$12$Z2Gvfmfvp8xxdByGHmgPY',
     'system'
 ),
 (
@@ -200,11 +210,21 @@ INSERT INTO seguridad.usuario_app (
     'vendedor@hotelluxemburgo.com',
     'Vendedor',
     'Recepcion',
-    '$2b$11$MDtqAiMfwhca7Upp4vBRI.x5wEU0W5j6DuukLXYFwHQBGbmkOqfRC',
-    '$2b$11$MDtqAiMfwhca7Upp4vBRI.',
+    '$2a$12$35KBjtktrV3wPTPaez/28.X8yEupQ4LMWgcLTGBOKkZCewtf5xsvK',
+    '$2a$12$35KBjtktrV3wPTPaez/28',
+    'system'
+),
+(
+    gen_random_uuid(),
+    NULL,
+    'pookingint',
+    'pookingint@hotelluxemburgo.com',
+    'Pooking',
+    'Int',
+    '$2a$12$cO/NpN3U0vOW2.noBD64k.ACtk25slMBAYoeAaBQ748Itwg1VJ0aq',
+    '$2a$12$cO/NpN3U0vOW2.noBD64k',
     'system'
 );
-
 
 -- ============================================================
 -- ASIGNACION DE ROLES A USUARIOS
@@ -220,16 +240,26 @@ CROSS  JOIN seguridad.rol r
 WHERE  (u.username = 'admin'    AND r.nombre_rol = 'ADMIN')
    OR  (u.username = 'vendedor' AND r.nombre_rol = 'VENDEDOR');
 
+INSERT INTO seguridad.usuarios_roles (
+    id_usuario,
+    id_rol,
+    creado_por_usuario
+)
+SELECT u.id_usuario, r.id_rol, 'system'
+FROM   seguridad.usuario_app u
+CROSS  JOIN seguridad.rol r
+WHERE  u.username = 'pookingint'
+  AND  r.nombre_rol = 'ADMIN';
 
 -- ============================================================
 -- VERIFICACION FINAL
--- Debes ver: 2 roles, 2 usuarios, 2 asignaciones.
+-- Resultados esperados: 2 roles, 2 usuarios, 2 asignaciones.
 -- ============================================================
 SELECT 'Roles creados:        ' || COUNT(*)::text AS resultado FROM seguridad.rol;
 SELECT 'Usuarios creados:     ' || COUNT(*)::text AS resultado FROM seguridad.usuario_app;
 SELECT 'Asignaciones rol-usr: ' || COUNT(*)::text AS resultado FROM seguridad.usuarios_roles;
 
--- Vista rapida de usuarios con sus roles
+-- Vista rapida: usuarios con sus roles asignados
 SELECT
     u.username,
     u.correo,
@@ -238,7 +268,7 @@ SELECT
     r.descripcion_rol,
     u.estado_usuario,
     u.activo
-FROM   seguridad.usuario_app u
+FROM   seguridad.usuario_app    u
 LEFT   JOIN seguridad.usuarios_roles ur ON ur.id_usuario = u.id_usuario
 LEFT   JOIN seguridad.rol            r  ON r.id_rol      = ur.id_rol
 ORDER  BY u.id_usuario;

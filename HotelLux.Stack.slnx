@@ -4,4 +4,6 @@
   <Project Path="HotelLux.Accommodation/HotelLux.Accommodation.API/HotelLux.Accommodation.API.csproj" />
   <Project Path="HotelLux.Reservation/HotelLux.Reservation.API/HotelLux.Reservation.API.csproj" />
   <Project Path="HotelLux.Stay/HotelLux.Stay.API/HotelLux.Stay.API.csproj" />
+  <Project Path="HotelLux.Finance/HotelLux.Finance.API/HotelLux.Finance.API.csproj" />
+  <Project Path="HotelLux.Audit/HotelLux.Audit.API/HotelLux.Audit.API.csproj" />
 </Solution>
