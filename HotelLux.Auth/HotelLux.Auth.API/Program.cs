@@ -5,11 +5,17 @@ using HotelLux.Auth.API.GrpcServices;
 using HotelLux.Shared.Hosting;
 using HotelLux.Auth.API.Middleware;
 using HotelLux.Auth.API.Seeders;
-using HotelLux.Auth.DataAccess.Context;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (OperatingSystem.IsWindows() && builder.Environment.IsProduction())
+{
+    builder.Logging.ClearProviders();
+    builder.Logging.AddConsole();
+    builder.Logging.AddDebug();
+}
 
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
@@ -41,18 +47,12 @@ builder.Services.AddCustomCors(builder.Configuration, builder.Environment);
 builder.Services.AddCustomAuthentication(builder.Configuration);
 builder.Services.AddCustomSwagger();
 builder.Services.AddApplicationServices(builder.Configuration);
+builder.Services.AddHostedService<AuthStartupSeeder>();
 builder.Services.AddAuthorization();
 
 builder.WebHost.ConfigureHotelLuxKestrel(builder.Environment, defaultHttpPort: 5001, defaultGrpcPort: 5101);
 
 var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-    await PasswordSeeder.RegenerarHashesPlaceholderAsync(db, CancellationToken.None);
-    await DevUsersSeeder.EnsureDevCredentialsAsync(db, CancellationToken.None);
-}
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
