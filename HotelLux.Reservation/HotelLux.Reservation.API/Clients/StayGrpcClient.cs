@@ -1,6 +1,7 @@
 using Grpc.Core;
 using Grpc.Net.Client;
 using HotelLux.Protos.Stay;
+using HotelLux.Shared.Grpc;
 using HotelLux.Reservation.Business.DTOs.Stay;
 using HotelLux.Reservation.Business.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -15,10 +16,8 @@ public class StayGrpcClient : IStayClient
 
     public StayGrpcClient(IConfiguration configuration, ILogger<StayGrpcClient> logger)
     {
-        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        var address = configuration["StayService:GrpcAddress"] ?? "http://127.0.0.1:5104";
-        var handler = new SocketsHttpHandler { EnableMultipleHttp2Connections = true };
-        _channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions { HttpHandler = handler });
+        var address = GrpcChannelFactory.ResolveAddress(configuration, "StayService:GrpcAddress", null, 5104);
+        _channel = GrpcChannelFactory.Create(address);
         _logger = logger;
     }
 

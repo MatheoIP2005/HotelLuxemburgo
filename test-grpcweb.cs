@@ -1,0 +1,10 @@
+﻿using Grpc.Net.Client;
+using Grpc.Net.Client.Web;
+using HotelLux.Protos.Auth;
+AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+var inner = new SocketsHttpHandler();
+var handler = new GrpcWebHandler(GrpcWebMode.GrpcWeb, inner);
+using var ch = GrpcChannel.ForAddress("http://127.0.0.1:5001", new GrpcChannelOptions { HttpHandler = handler });
+var client = new AuthService.AuthServiceClient(ch);
+var r = await client.ValidateTokenAsync(new ValidateTokenRequest { Token = "invalid" });
+Console.WriteLine(r.Valid);

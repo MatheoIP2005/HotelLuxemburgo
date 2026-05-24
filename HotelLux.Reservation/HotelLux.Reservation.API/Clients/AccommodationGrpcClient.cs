@@ -2,6 +2,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Net.Client;
 using HotelLux.Protos.Accommodation;
 using HotelLux.Reservation.Business.Interfaces;
+using HotelLux.Shared.Grpc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
@@ -18,10 +19,8 @@ public class AccommodationGrpcClient : IAccommodationClient
 
     public AccommodationGrpcClient(IConfiguration config, ILogger<AccommodationGrpcClient> logger)
     {
-        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        var address = config["AccommodationService:GrpcAddress"] ?? "http://localhost:5102";
-        var handler = new SocketsHttpHandler { EnableMultipleHttp2Connections = true };
-        _channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions { HttpHandler = handler });
+        var address = GrpcChannelFactory.ResolveAddress(config, "AccommodationService:GrpcAddress", null, 5102);
+        _channel = GrpcChannelFactory.Create(address);
         _restClient = CreateRestClient(config, address);
         _fallbackKey = config["AccommodationService:FallbackKey"]
             ?? config["InternalService:FallbackKey"];

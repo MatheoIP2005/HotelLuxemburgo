@@ -1,7 +1,9 @@
 using System.Text;
 using Asp.Versioning;
+using Grpc.AspNetCore.Web;
 using HotelLux.Audit.API.Extensions;
 using HotelLux.Audit.API.GrpcServices;
+using HotelLux.Shared.Hosting;
 using HotelLux.Audit.DataAccess.Context;
 using HotelLux.Audit.DataAccess.Repositories;
 using HotelLux.Audit.DataAccess.Repositories.Interfaces;
@@ -45,6 +47,7 @@ builder.Services.AddDbContext<AuditDbContext>(opts =>
 builder.Services.AddScoped<IEventoAuditoriaRepository, EventoAuditoriaRepository>();
 
 builder.Services.AddGrpc();
+builder.Services.AddHealthChecks();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddVersionedSwagger(
@@ -53,20 +56,7 @@ builder.Services.AddVersionedSwagger(
 builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
-// Kestrel — REST en httpPort (Http1AndHttp2) + listener dedicado gRPC h2c en grpcPort (Http2).
-// El AuditService es consumer fire-and-forget vía gRPC, así que el puerto gRPC es el camino real.
-var httpPort = int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var p) ? p : 5008;
-var grpcPort = int.TryParse(Environment.GetEnvironmentVariable("GRPC_PORT"), out var gp) ? gp : 5108;
-builder.WebHost.ConfigureKestrel(opts =>
-{
-    opts.ListenAnyIP(httpPort, lo =>
-        lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2);
-    if (grpcPort != httpPort)
-    {
-        opts.ListenAnyIP(grpcPort, lo =>
-            lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
-    }
-});
+builder.WebHost.ConfigureHotelLuxKestrel(builder.Environment, defaultHttpPort: 5008, defaultGrpcPort: 5108);
 
 var app = builder.Build();
 app.UseMiddleware<HotelLux.Audit.API.Middleware.ExceptionMiddleware>();
@@ -74,9 +64,11 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseRouting();
+app.UseGrpcWeb();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGrpcService<AuditGrpcService>().EnableGrpcWeb();
 app.MapControllers();
-app.MapGrpcService<AuditGrpcService>();
+app.MapHealthChecks("/health");
 app.Run();

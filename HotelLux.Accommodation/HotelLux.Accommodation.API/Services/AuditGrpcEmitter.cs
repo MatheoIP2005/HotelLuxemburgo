@@ -1,6 +1,7 @@
 using Grpc.Net.Client;
 using HotelLux.Accommodation.Business.Interfaces;
 using HotelLux.Protos.Audit;
+using HotelLux.Shared.Grpc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -13,10 +14,8 @@ public class AuditGrpcEmitter : IAuditEmitter
 
     public AuditGrpcEmitter(IConfiguration config, ILogger<AuditGrpcEmitter> logger)
     {
-        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        var address = config["AuditService:GrpcAddress"] ?? "http://localhost:5108";
-        var handler = new SocketsHttpHandler { EnableMultipleHttp2Connections = true };
-        _channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions { HttpHandler = handler });
+        var address = GrpcChannelFactory.ResolveAddress(config, "AuditService:GrpcAddress", null, 5108);
+        _channel = GrpcChannelFactory.Create(address);
         _logger = logger;
     }
 

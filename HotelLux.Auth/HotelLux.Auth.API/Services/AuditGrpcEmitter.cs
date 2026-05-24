@@ -1,6 +1,7 @@
 using Grpc.Net.Client;
 using HotelLux.Auth.Business.Interfaces;
 using HotelLux.Protos.Audit;
+using HotelLux.Shared.Grpc;
 
 namespace HotelLux.Auth.API.Services;
 
@@ -14,11 +15,8 @@ public class AuditGrpcEmitter : IAuditEmitter
     public AuditGrpcEmitter(ILogger<AuditGrpcEmitter> logger, IConfiguration configuration)
     {
         _logger = logger;
-        // h2c (HTTP/2 cleartext) requiere este switch en .NET para Grpc.Net.Client.
-        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        var address = configuration["AuditService:GrpcAddress"] ?? "http://localhost:5108";
-        var handler = new SocketsHttpHandler { EnableMultipleHttp2Connections = true };
-        _channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions { HttpHandler = handler });
+        var address = GrpcChannelFactory.ResolveAddress(configuration, "AuditService:GrpcAddress", null, 5108);
+        _channel = GrpcChannelFactory.Create(address);
     }
 
     public async Task EmitAsync(

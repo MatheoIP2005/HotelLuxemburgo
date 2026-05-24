@@ -1,6 +1,8 @@
 using System.Text;
 using Asp.Versioning;
+using Grpc.AspNetCore.Web;
 using HotelLux.Finance.API.Extensions;
+using HotelLux.Shared.Hosting;
 using HotelLux.Finance.API.Clients;
 using HotelLux.Finance.API.GrpcServices;
 using HotelLux.Finance.API.Middleware;
@@ -58,6 +60,7 @@ builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddSingleton<IAuditEmitter, AuditGrpcClient>();
 
 builder.Services.AddGrpc();
+builder.Services.AddHealthChecks();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddVersionedSwagger(
@@ -66,28 +69,18 @@ builder.Services.AddVersionedSwagger(
 builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
-// Kestrel — REST en httpPort (Http1AndHttp2) + listener dedicado gRPC h2c en grpcPort (Http2).
-var httpPort = int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var p) ? p : 5005;
-var grpcPort = int.TryParse(Environment.GetEnvironmentVariable("GRPC_PORT"), out var gp) ? gp : 5105;
-builder.WebHost.ConfigureKestrel(opts =>
-{
-    opts.ListenAnyIP(httpPort, lo =>
-        lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2);
-    if (grpcPort != httpPort)
-    {
-        opts.ListenAnyIP(grpcPort, lo =>
-            lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
-    }
-});
+builder.WebHost.ConfigureHotelLuxKestrel(builder.Environment, defaultHttpPort: 5005, defaultGrpcPort: 5105);
 
 var app = builder.Build();
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseRouting();
+app.UseGrpcWeb();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGrpcService<FinanceGrpcService>().EnableGrpcWeb();
 app.MapControllers();
-app.MapGrpcService<FinanceGrpcService>();
+app.MapHealthChecks("/health");
 app.Run();

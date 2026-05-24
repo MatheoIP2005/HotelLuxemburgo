@@ -1,6 +1,8 @@
 using Asp.Versioning.ApiExplorer;
+using Grpc.AspNetCore.Web;
 using HotelLux.Auth.API.Extensions;
 using HotelLux.Auth.API.GrpcServices;
+using HotelLux.Shared.Hosting;
 using HotelLux.Auth.API.Middleware;
 using HotelLux.Auth.API.Seeders;
 using HotelLux.Auth.DataAccess.Context;
@@ -41,22 +43,7 @@ builder.Services.AddCustomSwagger();
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddAuthorization();
 
-// Kestrel — dos listeners cleartext:
-//   * REST  (HTTP/1.1 + HTTP/2 negociable vía TLS aguas arriba) en HTTP_PORT/PORT.
-//   * gRPC  (HTTP/2 sin TLS, h2c) en GRPC_PORT.
-// gRPC requiere HTTP/2; en cleartext sin TLS Kestrel cae a HTTP/1.1 si no se fuerza Http2.
-var httpPort = int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var ap) ? ap : 5001;
-var grpcPort = int.TryParse(Environment.GetEnvironmentVariable("GRPC_PORT"), out var gp) ? gp : 5101;
-builder.WebHost.ConfigureKestrel(opts =>
-{
-    opts.ListenAnyIP(httpPort, lo =>
-        lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2);
-    if (grpcPort != httpPort)
-    {
-        opts.ListenAnyIP(grpcPort, lo =>
-            lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
-    }
-});
+builder.WebHost.ConfigureHotelLuxKestrel(builder.Environment, defaultHttpPort: 5001, defaultGrpcPort: 5101);
 
 var app = builder.Build();
 
@@ -83,12 +70,13 @@ app.UseSwaggerUI(options =>
 });
 
 app.UseRouting();
+app.UseGrpcWeb();
 app.UseCors("CorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health");
+app.MapGrpcService<AuthGrpcService>().EnableGrpcWeb();
 app.MapControllers();
-app.MapGrpcService<AuthGrpcService>();
 
 app.Run();

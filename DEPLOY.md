@@ -264,11 +264,38 @@ reservas y clientes de prueba precargados.
 
 ---
 
+## Cómo funciona gRPC en producción (Render)
+
+El reverse proxy de Render recibe las conexiones HTTPS del cliente y las reenvía al contenedor en HTTP/1.1.
+gRPC nativo requiere HTTP/2 y falla con `"Request protocol 'HTTP/1.1' is not supported"` en ese escenario.
+
+**La solución implementada en el código usa gRPC-Web** (protocolo compatible con HTTP/1.1):
+
+- Render inyecta automáticamente la variable `RENDER=true` en todos sus servicios.
+- La clase `HotelLux.Shared.Grpc.GrpcChannelFactory` detecta esa variable y crea un `GrpcWebHandler` en vez de un `SocketsHttpHandler` nativo.
+- Los servidores tienen `app.UseGrpcWeb()` + `EnableGrpcWeb()` para decodificar esas peticiones.
+- Kestrel en producción escucha solo en HTTP/1.1 (PORT), sin listener HTTP/2 adicional.
+
+**No necesitás configurar nada extra en Render.** El switch es automático.
+
+Si desplegás en otra plataforma que también use un proxy HTTP/1.1 (Railway, Fly.io, etc.), podés forzar gRPC-Web manualmente agregando la variable de entorno:
+```
+GRPC_USE_WEB = true
+```
+
+Para forzar gRPC nativo (h2c) aunque estés en Render, usá:
+```
+GRPC_USE_WEB = false
+```
+
+---
+
 ## Troubleshooting frecuente
 
 | Error | Causa | Solución |
 |-------|-------|----------|
 | `SSL connection is required` | Falta SSL en connection string | Agregar `SSL Mode=Require;Trust Server Certificate=true` |
+| `Request protocol 'HTTP/1.1' is not supported` | `RENDER` no está en `true` o gRPC-Web no activo | Verificar que Render inyecte `RENDER=true`; o setear `GRPC_USE_WEB=true` manualmente |
 | `Connection refused` en gRPC | URL del servicio incorrecta o servicio dormido | Verificar URL en env vars; esperar que el servicio despierte |
 | `Jwt:Key no configurada` | Falta variable de entorno | Agregar `Jwt__Key` en Render |
 | Build falla: `protos not found` | Dockerfile con context incorrecto | El build context debe ser la raíz del repo |

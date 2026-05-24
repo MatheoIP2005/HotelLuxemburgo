@@ -1,6 +1,8 @@
 using System.Text;
 using Asp.Versioning;
+using Grpc.AspNetCore.Web;
 using HotelLux.Stay.API.Extensions;
+using HotelLux.Shared.Hosting;
 using HotelLux.Stay.API.GrpcServices;
 using HotelLux.Stay.API.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -38,6 +40,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 builder.Services.AddGrpc();
+builder.Services.AddHealthChecks();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddVersionedSwagger(
@@ -47,19 +50,7 @@ builder.Services.AddStayServices(builder.Configuration);
 builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
-// Kestrel — REST en httpPort (Http1AndHttp2) + listener dedicado gRPC h2c en grpcPort (Http2).
-var httpPort = int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var p) ? p : 5004;
-var grpcPort = int.TryParse(Environment.GetEnvironmentVariable("GRPC_PORT"), out var gp) ? gp : 5104;
-builder.WebHost.ConfigureKestrel(opts =>
-{
-    opts.ListenAnyIP(httpPort, lo =>
-        lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2);
-    if (grpcPort != httpPort)
-    {
-        opts.ListenAnyIP(grpcPort, lo =>
-            lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
-    }
-});
+builder.WebHost.ConfigureHotelLuxKestrel(builder.Environment, defaultHttpPort: 5004, defaultGrpcPort: 5104);
 
 var app = builder.Build();
 app.UseMiddleware<ExceptionMiddleware>();
@@ -67,9 +58,11 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseRouting();
+app.UseGrpcWeb();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGrpcService<StayGrpcService>().EnableGrpcWeb();
 app.MapControllers();
-app.MapGrpcService<StayGrpcService>();
+app.MapHealthChecks("/health");
 app.Run();

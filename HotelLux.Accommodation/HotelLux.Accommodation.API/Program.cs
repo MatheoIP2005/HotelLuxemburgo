@@ -1,8 +1,10 @@
 using System.Text;
 using Asp.Versioning;
+using Grpc.AspNetCore.Web;
 using HotelLux.Accommodation.API.Extensions;
 using HotelLux.Accommodation.API.GrpcServices;
 using HotelLux.Accommodation.API.Middleware;
+using HotelLux.Shared.Hosting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -38,6 +40,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 builder.Services.AddGrpc();
+builder.Services.AddHealthChecks();
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>
         opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase);
@@ -51,19 +54,7 @@ builder.Services.AddAccommodationServices(builder.Configuration);
 builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
-// Kestrel — REST en httpPort (Http1AndHttp2) + listener dedicado gRPC h2c en grpcPort (Http2).
-var httpPort = int.TryParse(Environment.GetEnvironmentVariable("PORT"), out var p) ? p : 5002;
-var grpcPort = int.TryParse(Environment.GetEnvironmentVariable("GRPC_PORT"), out var gp) ? gp : 5102;
-builder.WebHost.ConfigureKestrel(opts =>
-{
-    opts.ListenAnyIP(httpPort, lo =>
-        lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2);
-    if (grpcPort != httpPort)
-    {
-        opts.ListenAnyIP(grpcPort, lo =>
-            lo.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
-    }
-});
+builder.WebHost.ConfigureHotelLuxKestrel(builder.Environment, defaultHttpPort: 5002, defaultGrpcPort: 5102);
 
 var app = builder.Build();
 
@@ -74,6 +65,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseRouting();
+app.UseGrpcWeb();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -87,7 +79,8 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/files"
 });
 
+app.MapGrpcService<AccommodationGrpcService>().EnableGrpcWeb();
 app.MapControllers();
-app.MapGrpcService<AccommodationGrpcService>();
+app.MapHealthChecks("/health");
 
 app.Run();

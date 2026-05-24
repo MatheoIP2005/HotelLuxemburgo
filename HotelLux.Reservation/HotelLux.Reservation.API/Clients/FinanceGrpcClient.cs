@@ -1,6 +1,7 @@
 using Grpc.Net.Client;
 using HotelLux.Protos.Finance;
 using HotelLux.Reservation.Business.Interfaces;
+using HotelLux.Shared.Grpc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -13,12 +14,11 @@ public class FinanceGrpcClient : IFinanceClient
 
     public FinanceGrpcClient(IConfiguration config, ILogger<FinanceGrpcClient> logger)
     {
-        AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-        var address = config["FinanceService:GrpcAddress"]
-            ?? config["GrpcClients:FinanceUrl"]
-            ?? "http://127.0.0.1:5105";
-        var handler = new SocketsHttpHandler { EnableMultipleHttp2Connections = true };
-        _channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions { HttpHandler = handler });
+        var address = config["FinanceService:GrpcAddress"] ?? config["GrpcClients:FinanceUrl"];
+        address = string.IsNullOrWhiteSpace(address)
+            ? GrpcChannelFactory.ResolveAddress(config, "FinanceService:GrpcAddress", null, 5105)
+            : address.Trim();
+        _channel = GrpcChannelFactory.Create(address);
         _logger = logger;
     }
 

@@ -19,7 +19,12 @@ public static class CorsExtensions
                 {
                     policy.AllowAnyOrigin()
                         .AllowAnyHeader()
-                        .AllowAnyMethod();
+                        .AllowAnyMethod()
+                        .WithExposedHeaders(
+                            "Grpc-Status",
+                            "Grpc-Message",
+                            "Grpc-Encoding",
+                            "Grpc-Accept-Encoding");
                 }
                 else
                 {
