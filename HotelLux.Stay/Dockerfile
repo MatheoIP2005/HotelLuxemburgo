@@ -5,10 +5,12 @@ COPY ["HotelLux.Stay/HotelLux.Stay.API/HotelLux.Stay.API.csproj", "HotelLux.Stay
 COPY ["HotelLux.Stay/HotelLux.Stay.Business/HotelLux.Stay.Business.csproj", "HotelLux.Stay/HotelLux.Stay.Business/"]
 COPY ["HotelLux.Stay/HotelLux.Stay.DataManagement/HotelLux.Stay.DataManagement.csproj", "HotelLux.Stay/HotelLux.Stay.DataManagement/"]
 COPY ["HotelLux.Stay/HotelLux.Stay.DataAccess/HotelLux.Stay.DataAccess.csproj", "HotelLux.Stay/HotelLux.Stay.DataAccess/"]
+COPY ["HotelLux.Shared/HotelLux.Shared.csproj", "HotelLux.Shared/"]
 
 RUN dotnet restore "HotelLux.Stay/HotelLux.Stay.API/HotelLux.Stay.API.csproj"
 
 COPY HotelLux.Stay/ HotelLux.Stay/
+COPY HotelLux.Shared/ HotelLux.Shared/
 COPY protos/ protos/
 
 WORKDIR /src/HotelLux.Stay/HotelLux.Stay.API

@@ -3,10 +3,12 @@ WORKDIR /src
 
 COPY ["HotelLux.Audit/HotelLux.Audit.API/HotelLux.Audit.API.csproj", "HotelLux.Audit/HotelLux.Audit.API/"]
 COPY ["HotelLux.Audit/HotelLux.Audit.DataAccess/HotelLux.Audit.DataAccess.csproj", "HotelLux.Audit/HotelLux.Audit.DataAccess/"]
+COPY ["HotelLux.Shared/HotelLux.Shared.csproj", "HotelLux.Shared/"]
 
 RUN dotnet restore "HotelLux.Audit/HotelLux.Audit.API/HotelLux.Audit.API.csproj"
 
 COPY HotelLux.Audit/ HotelLux.Audit/
+COPY HotelLux.Shared/ HotelLux.Shared/
 COPY protos/ protos/
 
 WORKDIR /src/HotelLux.Audit/HotelLux.Audit.API
