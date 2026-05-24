@@ -40,6 +40,8 @@ public static class VersionedSwaggerExtensions
 
         public void Configure(SwaggerGenOptions options)
         {
+            options.CustomSchemaIds(type => type.FullName?.Replace("+", ".") ?? type.Name);
+
             foreach (var description in _provider.ApiVersionDescriptions)
             {
                 options.SwaggerDoc(description.GroupName, new OpenApiInfo

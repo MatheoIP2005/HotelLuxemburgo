@@ -1,39 +1,18 @@
 -- ============================================================
 -- HOTEL LUXEMBURGO -- Microservicio ACCOMMODATION
 -- Base de datos: HotelLux_Accommodation
--- Motor: PostgreSQL 18
--- Version: 2.0
---
--- DEPENDENCIAS: ninguna (independiente)
 --
 -- CONTENIDO:
 --   Schema: alojamiento
 --   Tablas: sucursal, sucursal_imagen, tipo_habitacion,
 --           tipo_habitacion_imagen, catalogo_servicios,
 --           tipo_habitacion_catalogo, habitacion, tarifa
---
---   Datos semilla:
---     3 sucursales   : Quito, Guayaquil, Cuenca
---     6 imagenes     : 2 por sucursal
---     4 tipos hab    : Single, Doble, Familiar, Premium
---     8 imagenes     : 2 por tipo de habitacion
---     8 catalogos    : 4 amenidades (AME) + 4 servicios (SRV)
---     15 relaciones  : tipo_habitacion_catalogo
---     10 habitaciones: 4 Quito, 3 Guayaquil, 3 Cuenca
---     8 tarifas      : vigentes 2026, una por sucursal-tipo disponible
---
--- INSTRUCCIONES EN pgAdmin:
---   1. Create Database: HotelLux_Accommodation / Owner: postgres
---   2. Query Tool -> File -> Open este archivo -> F5
---   3. Verificar los SELECT de conteo al final.
 -- ============================================================
-
 
 -- ============================================================
 -- SCHEMA
 -- ============================================================
 CREATE SCHEMA IF NOT EXISTS alojamiento;
-
 
 -- ============================================================
 -- TABLA: alojamiento.sucursal
@@ -41,23 +20,23 @@ CREATE SCHEMA IF NOT EXISTS alojamiento;
 CREATE TABLE alojamiento.sucursal (
     id_sucursal              INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     sucursal_guid            UUID          NOT NULL DEFAULT gen_random_uuid(),
-    codigo_sucursal          VARCHAR(30)   NOT NULL,
-    nombre_sucursal          VARCHAR(150)  NOT NULL,
-    descripcion_sucursal     TEXT          NULL,
-    descripcion_corta        VARCHAR(250)  NULL,
+    codigo_sucursal          CHAR(10)   NOT NULL y los códigos van como por ejemplo LUX-UIO, LUX-GYE, LUX-CUE, etc.,
+    nombre_sucursal          VARCHAR(100)  NOT NULL y los nombres van como por ejemplo Hotel Luxemburgo Quito, Hotel Luxemburgo Guayaquil, Hotel Luxemburgo Cuenca, etc.,
+    descripcion_sucursal     VARCHAR(250)         NULL descripción ampliada de la sucursal,
+    descripcion_corta        VARCHAR(250)  NULL descripción corta de la sucursal,
     tipo_alojamiento         VARCHAR(20)   NOT NULL DEFAULT 'hotel',
     estrellas                INT           NULL,
-    categoria_viaje          VARCHAR(30)   NULL,
-    pais                     VARCHAR(100)  NOT NULL,
-    provincia                VARCHAR(100)  NULL,
-    ciudad                   VARCHAR(100)  NOT NULL,
+    categoria_viaje          CHAR(30)   NULL ('playa','ciudad','montana','aventura','cultural','bienestar') debes contextualizar dependiendo del hotel que crees, es decir no vas a poner playa en quito, debe tener sentido,
+    pais                     CHAR(15)  NOT NULL (Ecuador),
+    provincia                CHAR(30)  NULL (contextualizado de donde es la sucursal para que los datos tengan sentido),
+    ciudad                   CHAR(25)  NOT NULL (contextualizado de donde es la sucursal para que los datos tengan sentido),
     ubicacion                VARCHAR(200)  NOT NULL,
     direccion                VARCHAR(250)  NOT NULL,
-    codigo_postal            VARCHAR(20)   NULL,
-    telefono                 VARCHAR(30)   NOT NULL,
-    correo                   VARCHAR(150)  NOT NULL,
-    latitud                  NUMERIC(10,7) NULL,
-    longitud                 NUMERIC(10,7) NULL,
+    codigo_postal            VARCHAR(20)   NULL (codigo postal de la sucursal, contextualizado de donde es la sucursal para que los datos tengan sentido),
+    telefono                 CHAR(9)   NOT NULL (el teléfono debe tener 9 dígitos, sin espacios ni guiones como por ejemplo 023444019 y debes tener en cuenta la provincia y ciudad para que los datos tengan sentido),
+    correo                   CHAR(50)  NOT NULL (correo electrónico de la sucursal, debe ser un correo electrónico válido y debe tener sentido para la sucursal),
+    latitud                  NUMERIC(10,7) NULL (latitud de la sucursal, debe ser un número decimal con 7 decimales como por ejemplo -0.2058543),
+    longitud                 NUMERIC(10,7) NULL (longitud de la sucursal, debe ser un número decimal con 7 decimales como por ejemplo -78.4929210),
     hora_checkin             VARCHAR(5)    NULL DEFAULT '15:00',
     hora_checkout            VARCHAR(5)    NULL DEFAULT '12:00',
     checkin_anticipado       BOOLEAN       NOT NULL DEFAULT FALSE,
@@ -69,13 +48,13 @@ CREATE TABLE alojamiento.sucursal (
     estado_sucursal          CHAR(3)       NOT NULL DEFAULT 'ACT',
     es_eliminado             BOOLEAN       NOT NULL DEFAULT FALSE,
     fecha_inhabilitacion_utc TIMESTAMPTZ   NULL,
-    motivo_inhabilitacion    VARCHAR(250)  NULL,
+    motivo_inhabilitacion    VARCHAR(150)  NULL,
     fecha_registro_utc       TIMESTAMPTZ   NOT NULL DEFAULT now(),
-    creado_por_usuario       VARCHAR(100)  NOT NULL,
-    modificado_por_usuario   VARCHAR(100)  NULL,
+    creado_por_usuario       CHAR(30)  NOT NULL,
+    modificado_por_usuario   CHAR(30)  NULL,
     fecha_modificacion_utc   TIMESTAMPTZ   NULL,
-    modificacion_ip          VARCHAR(45)   NULL,
-    servicio_origen          VARCHAR(50)   NOT NULL DEFAULT 'accommodation-service',
+    modificacion_ip          CHAR(25)   NULL,
+    servicio_origen          CHAR(50)   NOT NULL DEFAULT 'accommodation-service',
     CONSTRAINT uq_sucursal_guid   UNIQUE (sucursal_guid),
     CONSTRAINT uq_sucursal_codigo UNIQUE (codigo_sucursal),
     CONSTRAINT uq_sucursal_nombre UNIQUE (nombre_sucursal),
@@ -90,7 +69,9 @@ CREATE TABLE alojamiento.sucursal (
         (edad_minima_huesped IS NULL OR edad_minima_huesped >= 0)
 );
 
-
+NOTA: DEBEN GENERARSE POR CADA TIPO DE ALOJAMIENTO 5 SUCURSALES 'hotel','hostal','apartamento','resort','villa','cabana','hostel'
+NOTA: DEBEN GENERARSE POR CADA CATEGORIA DE VIAJE 5 SUCURSALES 'playa','ciudad','montana','aventura','cultural','bienestar'
+NOTA: ES DECIR QUE QUIERO EN TOTAL 30 SUCURSALES MESCLANDO LOS 6 TIPOS DE ALOJAMIENTO Y LAS 6 CATEGORIAS DE VIAJE, PARA QUE TENGA SENTIDO LA DISTRIBUCION.
 -- ============================================================
 -- TABLA: alojamiento.sucursal_imagen
 -- ============================================================
@@ -103,7 +84,7 @@ CREATE TABLE alojamiento.sucursal_imagen (
     orden_visualizacion      INT          NOT NULL DEFAULT 1,
     es_principal             BOOLEAN      NOT NULL DEFAULT FALSE,
     fecha_registro_utc       TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    creado_por_usuario       VARCHAR(100) NOT NULL,
+    creado_por_usuario       CHAR(30) NOT NULL,
     CONSTRAINT uq_sucursal_imagen_guid UNIQUE (sucursal_imagen_guid),
     CONSTRAINT fk_sucursal_imagen_sucursal FOREIGN KEY (id_sucursal)
         REFERENCES alojamiento.sucursal(id_sucursal) ON DELETE CASCADE,
@@ -117,13 +98,13 @@ CREATE TABLE alojamiento.sucursal_imagen (
 CREATE TABLE alojamiento.tipo_habitacion (
     id_tipo_habitacion       INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     tipo_habitacion_guid     UUID         NOT NULL DEFAULT gen_random_uuid(),
-    codigo_tipo_habitacion   VARCHAR(30)  NOT NULL,
-    nombre_tipo_habitacion   VARCHAR(120) NOT NULL,
+    codigo_tipo_habitacion   CHAR(30)  NOT NULL (TH-SINGLE, TH-DOBLE, TH-FAMILIAR, TH-PREMIUM, TH-TRIPLE),
+    nombre_tipo_habitacion   CHAR(60) NOT NULL(Suite Single, Suite Doble, Suite Familiar, Suite Premium, Suite Triple) teniendo en cuenta los datos para que tenga sentido,
     descripcion              TEXT         NULL,
     capacidad_adultos        INT          NOT NULL,
     capacidad_ninos          INT          NOT NULL DEFAULT 0,
-    capacidad_total          INT          NOT NULL,
-    tipo_cama                VARCHAR(60)  NULL,
+    capacidad_total          INT          NOT NULL (debe tener en cuenta la capacidad de adultos y ninos),
+    tipo_cama                CHAR(60)  NULL (King size, Queen size, Individual, Matrimonial) teniendo en cuenta los datos para que tenga sentido,
     area_m2                  NUMERIC(6,2) NULL,
     permite_eventos          BOOLEAN      NOT NULL DEFAULT FALSE,
     permite_reserva_publica  BOOLEAN      NOT NULL DEFAULT TRUE,
@@ -132,11 +113,11 @@ CREATE TABLE alojamiento.tipo_habitacion (
     fecha_inhabilitacion_utc TIMESTAMPTZ  NULL,
     motivo_inhabilitacion    VARCHAR(250) NULL,
     fecha_registro_utc       TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    creado_por_usuario       VARCHAR(100) NOT NULL,
-    modificado_por_usuario   VARCHAR(100) NULL,
+    creado_por_usuario       CHAR(30) NOT NULL,
+    modificado_por_usuario   CHAR(30) NULL,
     fecha_modificacion_utc   TIMESTAMPTZ  NULL,
-    modificacion_ip          VARCHAR(45)  NULL,
-    servicio_origen          VARCHAR(50)  NOT NULL DEFAULT 'accommodation-service',
+    modificacion_ip          CHAR(25)  NULL,
+    servicio_origen          CHAR(50)  NOT NULL DEFAULT 'accommodation-service',
     CONSTRAINT uq_tipo_habitacion_guid   UNIQUE (tipo_habitacion_guid),
     CONSTRAINT uq_tipo_habitacion_codigo UNIQUE (codigo_tipo_habitacion),
     CONSTRAINT uq_tipo_habitacion_nombre UNIQUE (nombre_tipo_habitacion),
@@ -160,7 +141,7 @@ CREATE TABLE alojamiento.tipo_habitacion_imagen (
     orden_visualizacion       INT          NOT NULL DEFAULT 1,
     es_principal              BOOLEAN      NOT NULL DEFAULT FALSE,
     fecha_registro_utc        TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    creado_por_usuario        VARCHAR(100) NOT NULL,
+    creado_por_usuario        CHAR(50) NOT NULL,
     CONSTRAINT uq_tipo_hab_imagen_guid UNIQUE (tipo_hab_imagen_guid),
     CONSTRAINT fk_tipo_hab_imagen_tipo FOREIGN KEY (id_tipo_habitacion)
         REFERENCES alojamiento.tipo_habitacion(id_tipo_habitacion) ON DELETE CASCADE,
@@ -175,10 +156,10 @@ CREATE TABLE alojamiento.catalogo_servicios (
     id_catalogo              INT           NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     catalogo_guid            UUID          NOT NULL DEFAULT gen_random_uuid(),
     id_sucursal              INT           NULL,
-    codigo_catalogo          VARCHAR(30)   NOT NULL,
-    nombre_catalogo          VARCHAR(120)  NOT NULL,
-    tipo_catalogo            CHAR(3)       NOT NULL,
-    categoria_catalogo       VARCHAR(80)   NOT NULL,
+    codigo_catalogo          CHAR(10)   NOT NULL(debe tener sentido el como creas los datos),
+    nombre_catalogo          CHAR(60)  NOT NULL(debe tener sentido el como creas los datos),
+    tipo_catalogo            CHAR(3)       NOT NULL(debe tener sentido el como creas los datos),
+    categoria_catalogo       CHAR(80)   NOT NULL(debe tener sentido el como creas los datos),
     descripcion_catalogo     VARCHAR(250)  NULL,
     precio_base              NUMERIC(12,2) NOT NULL DEFAULT 0,
     aplica_iva               BOOLEAN       NOT NULL DEFAULT FALSE,
@@ -191,11 +172,11 @@ CREATE TABLE alojamiento.catalogo_servicios (
     fecha_inhabilitacion_utc TIMESTAMPTZ   NULL,
     motivo_inhabilitacion    VARCHAR(250)  NULL,
     fecha_registro_utc       TIMESTAMPTZ   NOT NULL DEFAULT now(),
-    creado_por_usuario       VARCHAR(100)  NOT NULL,
-    modificado_por_usuario   VARCHAR(100)  NULL,
+    creado_por_usuario       CHAR(30)  NOT NULL,
+    modificado_por_usuario   CHAR(30)  NULL,
     fecha_modificacion_utc   TIMESTAMPTZ   NULL,
-    modificacion_ip          VARCHAR(45)   NULL,
-    servicio_origen          VARCHAR(50)   NOT NULL DEFAULT 'accommodation-service',
+    modificacion_ip          CHAR(25)   NULL,
+    servicio_origen          CHAR(50)   NOT NULL DEFAULT 'accommodation-service',
     CONSTRAINT uq_catalogo_guid   UNIQUE (catalogo_guid),
     CONSTRAINT uq_catalogo_codigo UNIQUE (codigo_catalogo),
     CONSTRAINT fk_catalogo_sucursal FOREIGN KEY (id_sucursal)
