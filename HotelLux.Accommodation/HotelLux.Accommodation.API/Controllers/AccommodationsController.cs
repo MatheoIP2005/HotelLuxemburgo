@@ -82,20 +82,31 @@ public class AccommodationsController : ControllerBase
             ? (fechaFin!.Value.Date - fechaInicio!.Value.Date).Days
             : 1;
 
-        var baseQuery = _db.Sucursales.AsNoTracking()
+        var activeQuery = _db.Sucursales.AsNoTracking()
             .Where(x => !x.EsEliminado && x.EstadoSucursal == "ACT");
+        var baseQuery = activeQuery;
 
         if (!string.IsNullOrWhiteSpace(destino))
         {
             var destinoPattern = $"%{destino.Trim()}%";
             baseQuery = baseQuery.Where(x =>
+                EF.Functions.ILike(x.NombreSucursal, destinoPattern) ||
                 EF.Functions.ILike(x.Pais, destinoPattern) ||
                 (x.Provincia != null && EF.Functions.ILike(x.Provincia, destinoPattern)) ||
                 EF.Functions.ILike(x.Ciudad, destinoPattern) ||
-                EF.Functions.ILike(x.Ubicacion, destinoPattern));
+                EF.Functions.ILike(x.Ubicacion, destinoPattern) ||
+                EF.Functions.ILike(x.Direccion, destinoPattern) ||
+                (x.DescripcionCorta != null && EF.Functions.ILike(x.DescripcionCorta, destinoPattern)) ||
+                (x.DescripcionSucursal != null && EF.Functions.ILike(x.DescripcionSucursal, destinoPattern)));
         }
 
         var total = await baseQuery.CountAsync(cancellationToken);
+        if (total == 0 && IsEcuadorDestination(destino))
+        {
+            baseQuery = activeQuery;
+            total = await baseQuery.CountAsync(cancellationToken);
+        }
+
         var sucursales = await baseQuery
             .OrderBy(x => x.NombreSucursal)
             .Skip((pagina - 1) * limite)
@@ -471,4 +482,15 @@ public class AccommodationsController : ControllerBase
 
     private static DateTimeOffset ToUtcDateTimeOffset(DateOnly date) =>
         new(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+
+    private static bool IsEcuadorDestination(string? destino)
+    {
+        if (string.IsNullOrWhiteSpace(destino))
+            return false;
+
+        var value = destino.Trim();
+        return value.Equals("Ecuador", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("EC", StringComparison.OrdinalIgnoreCase)
+            || value.Equals("ECU", StringComparison.OrdinalIgnoreCase);
+    }
 }
