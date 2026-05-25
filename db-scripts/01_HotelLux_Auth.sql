@@ -6,11 +6,6 @@
 --   Schema: seguridad
 --   Tablas: rol, usuario_app, usuarios_roles
 --
---   Datos fijos (definidos por el sistema):
---     2 roles   : ADMIN (CRUD completo), VENDEDOR (sin DELETE)
---     2 usuarios: admin / vendedor
---     2 asignaciones rol-usuario
---
 -- NOTA ARQUITECTURA:
 --   cliente_guid en usuario_app se llena via bus de eventos / gRPC
 --   cuando un usuario del portal se vincula a un cliente en
@@ -24,10 +19,6 @@ CREATE SCHEMA IF NOT EXISTS seguridad;
 
 -- ============================================================
 -- TABLA: seguridad.rol
---
--- Almacena los roles del sistema. Cada rol define un conjunto
--- de permisos sobre los recursos. Los roles se asignan a
--- usuarios mediante la tabla usuarios_roles.
 -- ============================================================
 CREATE TABLE seguridad.rol (
     id_rol                   INT          GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -49,15 +40,8 @@ CREATE TABLE seguridad.rol (
     CONSTRAINT chk_rol_estado CHECK (estado_rol IN ('ACT','INA'))
 );
 
-
 -- ============================================================
 -- TABLA: seguridad.usuario_app
---
--- Almacena los usuarios del sistema (staff interno y clientes
--- del portal). El campo cliente_guid se llena via bus de
--- eventos / gRPC cuando el usuario se vincula a un cliente
--- en HotelLux_Reservation. Permanece NULL para usuarios
--- de staff (admin, vendedor).
 -- ============================================================
 CREATE TABLE seguridad.usuario_app (
     id_usuario               INT          GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -85,14 +69,8 @@ CREATE TABLE seguridad.usuario_app (
     CONSTRAINT chk_usuario_app_estado  CHECK  (estado_usuario IN ('ACT','INA','BLO'))
 );
 
-
 -- ============================================================
 -- TABLA: seguridad.usuarios_roles (N:M)
---
--- Tabla de union entre usuario_app y rol. Un usuario puede
--- tener multiples roles. Las referencias a id_usuario e
--- id_rol son FK fisicas dentro de esta misma BD; la
--- sincronizacion con otras BDs se hace via bus / gRPC.
 -- ============================================================
 CREATE TABLE seguridad.usuarios_roles (
     id_usuario_rol           INT         GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -135,7 +113,6 @@ CREATE INDEX ix_rol_estado
 -- ============================================================
 -- ============================================================
 
-
 -- ============================================================
 -- ROLES
 --
@@ -164,7 +141,6 @@ INSERT INTO seguridad.rol (
     'Personal de recepcion y ventas. Permisos: CREATE, READ, UPDATE. No puede eliminar registros del sistema.',
     'system'
 );
-
 
 -- ============================================================
 -- USUARIOS DEL SISTEMA

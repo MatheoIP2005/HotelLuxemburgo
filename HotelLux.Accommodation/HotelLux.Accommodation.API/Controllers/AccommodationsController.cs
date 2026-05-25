@@ -86,9 +86,14 @@ public class AccommodationsController : ControllerBase
             .Where(x => !x.EsEliminado && x.EstadoSucursal == "ACT");
 
         if (!string.IsNullOrWhiteSpace(destino))
+        {
+            var destinoPattern = $"%{destino.Trim()}%";
             baseQuery = baseQuery.Where(x =>
-                EF.Functions.ILike(x.Ciudad, $"%{destino}%") ||
-                EF.Functions.ILike(x.Ubicacion, $"%{destino}%"));
+                EF.Functions.ILike(x.Pais, destinoPattern) ||
+                (x.Provincia != null && EF.Functions.ILike(x.Provincia, destinoPattern)) ||
+                EF.Functions.ILike(x.Ciudad, destinoPattern) ||
+                EF.Functions.ILike(x.Ubicacion, destinoPattern));
+        }
 
         var total = await baseQuery.CountAsync(cancellationToken);
         var sucursales = await baseQuery
