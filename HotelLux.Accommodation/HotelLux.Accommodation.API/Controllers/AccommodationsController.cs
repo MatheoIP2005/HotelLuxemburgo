@@ -41,6 +41,7 @@ public class AccommodationsController : ControllerBase
         [FromQuery] DateTime? fechaInicio,
         [FromQuery] DateTime? fechaFin,
         [FromQuery] int? num_adultos,
+        [FromQuery] int? num_ninos,
         [FromQuery] int? num_habitaciones,
         [FromQuery] int pagina = 1,
         [FromQuery] int limite = 20,
@@ -73,6 +74,11 @@ public class AccommodationsController : ControllerBase
                 details = new[] { "num_adultos debe ser mayor a cero." },
                 timestamp = DateTime.UtcNow });
 
+        if (num_ninos.HasValue && num_ninos < 0)
+            return BadRequest(new { status = 400, error = "ParÃ¡metros invÃ¡lidos",
+                details = new[] { "num_ninos no puede ser negativo." },
+                timestamp = DateTime.UtcNow });
+
         if (num_habitaciones.HasValue && num_habitaciones <= 0)
             return BadRequest(new { status = 400, error = "Parámetros inválidos",
                 details = new[] { "num_habitaciones debe ser mayor a cero." },
@@ -85,6 +91,9 @@ public class AccommodationsController : ControllerBase
         var activeQuery = _db.Sucursales.AsNoTracking()
             .Where(x => !x.EsEliminado && x.EstadoSucursal == "ACT");
         var baseQuery = activeQuery;
+        var adultosSolicitados = num_adultos ?? 1;
+        var ninosSolicitados = num_ninos ?? 0;
+        var habitacionesSolicitadas = num_habitaciones ?? 1;
 
         if (!string.IsNullOrWhiteSpace(destino))
         {
@@ -100,10 +109,37 @@ public class AccommodationsController : ControllerBase
                 (x.DescripcionSucursal != null && EF.Functions.ILike(x.DescripcionSucursal, destinoPattern)));
         }
 
+        if (num_adultos.HasValue || num_ninos.HasValue || num_habitaciones.HasValue)
+        {
+            baseQuery = baseQuery.Where(s =>
+                _db.Habitaciones.Count(h =>
+                    h.IdSucursal == s.IdSucursal &&
+                    h.EstadoHabitacion == "DIS" &&
+                    !h.EsEliminado &&
+                    !h.TipoHabitacion.EsEliminado &&
+                    h.TipoHabitacion.EstadoTipoHabitacion == "ACT" &&
+                    h.TipoHabitacion.PermiteReservaPublica &&
+                    h.TipoHabitacion.CapacidadAdultos >= adultosSolicitados &&
+                    h.TipoHabitacion.CapacidadNinos >= ninosSolicitados) >= habitacionesSolicitadas);
+        }
+
         var total = await baseQuery.CountAsync(cancellationToken);
         if (total == 0 && IsEcuadorDestination(destino))
         {
             baseQuery = activeQuery;
+            if (num_adultos.HasValue || num_ninos.HasValue || num_habitaciones.HasValue)
+            {
+                baseQuery = baseQuery.Where(s =>
+                    _db.Habitaciones.Count(h =>
+                        h.IdSucursal == s.IdSucursal &&
+                        h.EstadoHabitacion == "DIS" &&
+                        !h.EsEliminado &&
+                        !h.TipoHabitacion.EsEliminado &&
+                        h.TipoHabitacion.EstadoTipoHabitacion == "ACT" &&
+                        h.TipoHabitacion.PermiteReservaPublica &&
+                        h.TipoHabitacion.CapacidadAdultos >= adultosSolicitados &&
+                        h.TipoHabitacion.CapacidadNinos >= ninosSolicitados) >= habitacionesSolicitadas);
+            }
             total = await baseQuery.CountAsync(cancellationToken);
         }
 
@@ -122,10 +158,22 @@ public class AccommodationsController : ControllerBase
         {
             var s = sucursales[idx];
             var resumenStay = resumenesStay[idx];
-            var unidadesRestantes = await _db.Habitaciones.CountAsync(h =>
+            var unidadesRestantesQuery = _db.Habitaciones.Where(h =>
                 h.IdSucursal == s.IdSucursal &&
                 h.EstadoHabitacion == "DIS" &&
-                !h.EsEliminado, cancellationToken);
+                !h.EsEliminado);
+
+            if (num_adultos.HasValue || num_ninos.HasValue || num_habitaciones.HasValue)
+            {
+                unidadesRestantesQuery = unidadesRestantesQuery.Where(h =>
+                    !h.TipoHabitacion.EsEliminado &&
+                    h.TipoHabitacion.EstadoTipoHabitacion == "ACT" &&
+                    h.TipoHabitacion.PermiteReservaPublica &&
+                    h.TipoHabitacion.CapacidadAdultos >= adultosSolicitados &&
+                    h.TipoHabitacion.CapacidadNinos >= ninosSolicitados);
+            }
+
+            var unidadesRestantes = await unidadesRestantesQuery.CountAsync(cancellationToken);
 
             decimal precioBase = 0m;
             if (fechaDesde.HasValue && fechaHasta.HasValue)
