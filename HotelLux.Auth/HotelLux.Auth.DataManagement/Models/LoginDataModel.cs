@@ -2,6 +2,7 @@ namespace HotelLux.Auth.DataManagement.Models;
 
 public class LoginDataModel
 {
+    public int UsuarioId { get; set; }
     public string Username { get; set; } = null!;
     public string Nombres { get; set; } = null!;
     public string? Apellidos { get; set; }

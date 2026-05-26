@@ -41,6 +41,7 @@ public class AuthService : IAuthService
 
         return new LoginResponseDTO
         {
+            UsuarioId = loginData.UsuarioId,
             Username = loginData.Username,
             NombreCompleto = $"{loginData.Nombres} {loginData.Apellidos}".Trim(),
             Correo = loginData.Correo,
@@ -82,6 +83,7 @@ public class AuthService : IAuthService
 
         return new LoginResponseDTO
         {
+            UsuarioId = loginData.UsuarioId,
             Username = loginData.Username,
             NombreCompleto = $"{loginData.Nombres} {loginData.Apellidos}".Trim(),
             Correo = loginData.Correo,

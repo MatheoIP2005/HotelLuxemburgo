@@ -32,7 +32,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LoginSuccessResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequestDTO request, CancellationToken cancellationToken)
@@ -74,14 +74,17 @@ public class AuthController : ControllerBase
             $"{{\"username\":\"{result.Username}\"}}",
             CancellationToken.None);
 
-        return Ok(new
+        return Ok(LoginSuccessResponse.Ok(new LoginSuccessData
         {
-            access_token = accessToken,
-            refresh_token = refreshToken,
-            expires_in = _jwtSettings.JwtExpiresIn,
-            usuario_guid = result.UsuarioGuid,
-            cliente_guid = result.ClienteGuid
-        });
+            Token = accessToken,
+            RefreshToken = refreshToken,
+            Expiration = accessExpiration,
+            UsuarioId = result.UsuarioId,
+            UsuarioGuid = result.UsuarioGuid,
+            Username = result.Username,
+            Email = result.Correo ?? string.Empty,
+            Roles = result.Roles
+        }));
     }
 
     [HttpPost("refresh")]

@@ -2,6 +2,7 @@ namespace HotelLux.Auth.Business.DTOs.Auth;
 
 public class LoginResponseDTO
 {
+    public int UsuarioId { get; set; }
     public string Username { get; set; } = null!;
     public string NombreCompleto { get; set; } = null!;
     public string? Correo { get; set; }

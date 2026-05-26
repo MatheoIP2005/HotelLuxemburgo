@@ -1,8 +1,6 @@
 -- ============================================================
 -- HOTEL LUXEMBURGO -- Microservicio FINANCE
 -- Base de datos: HotelLux_Finance
--- Motor: PostgreSQL 18
--- Version: 3.0
 --
 -- ALCANCE: fusiona billing + payment. Garantiza transacciones
 -- ACID locales al emitir facturas y registrar pagos.
@@ -23,26 +21,16 @@
 --     - fecha_emision FAC-001: corregida 2026-06-01 → 2026-05-11
 --                             (alineada con audit event 8 y RES-001)
 --
---   Datos semilla ampliados (de 4 facturas a 7):
---     - FAC-RES-2026-000004 : Turismo Andes S.A. (RES-004, Quito, EMI)
---     - FAC-RES-2026-000005 : Carlos Mora (RES-005, Cuenca, PAG)
---     - FAC-FIN-2026-000002 : Carlos Mora spa cc1004 (Cuenca, PAG)
---   Datos semilla pagos (de 3 a 5):
---     - cc...2004 : Carlos Mora, FAC-005 Mastercard $529 APR
---     - cc...2005 : Carlos Mora, FAC-007 Mastercard $51.75 APR
---
 -- CONTENIDO:
 --   Schema: finanzas
 --   Tablas: factura, factura_detalle, pago
 --   Datos : 7 facturas | 7 detalles | 5 pagos
 -- ============================================================
 
-
 -- ============================================================
 -- SCHEMA
 -- ============================================================
 CREATE SCHEMA IF NOT EXISTS finanzas;
-
 
 -- ============================================================
 -- TABLA: finanzas.factura

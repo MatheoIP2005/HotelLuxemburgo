@@ -12,7 +12,7 @@ public static class UsuarioDataMapper
             IdUsuario = entity.IdUsuario,
             UsuarioGuid = entity.UsuarioGuid,
             ClienteGuid = entity.ClienteGuid,
-            Username = entity.Username,
+            Username = entity.Username.Trim(),
             Correo = entity.Correo,
             Nombres = entity.Nombres,
             Apellidos = entity.Apellidos,
@@ -29,7 +29,7 @@ public static class UsuarioDataMapper
             FechaModificacionUtc = entity.FechaModificacionUtc,
             ModificacionIp = entity.ModificacionIp,
             Roles = entity.UsuarioRoles
-                .Select(ur => ur.Rol.NombreRol)
+                .Select(ur => ur.Rol.NombreRol.Trim())
                 .Distinct()
                 .ToList()
         };
@@ -65,7 +65,8 @@ public static class UsuarioDataMapper
     {
         return new LoginDataModel
         {
-            Username = entity.Username,
+            UsuarioId = entity.IdUsuario,
+            Username = entity.Username.Trim(),
             PasswordHash = entity.PasswordHash,
             PasswordSalt = entity.PasswordSalt,
             Activo = entity.Activo,
@@ -78,7 +79,7 @@ public static class UsuarioDataMapper
             ClienteGuid = entity.ClienteGuid,
             Roles = entity.UsuarioRoles
                 .Where(ur => !ur.EsEliminado && ur.Activo && ur.EstadoUsuarioRol == "ACT" && !ur.Rol.EsEliminado && ur.Rol.Activo && ur.Rol.EstadoRol == "ACT")
-                .Select(ur => ur.Rol.NombreRol)
+                .Select(ur => ur.Rol.NombreRol.Trim())
                 .Distinct()
                 .ToList()
         };

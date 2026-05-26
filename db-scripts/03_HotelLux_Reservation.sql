@@ -78,8 +78,8 @@ CREATE TABLE reservas.reserva (
     id_cliente               INT           NOT NULL,
     sucursal_guid            UUID          NOT NULL, -- ref logica a alojamiento.sucursal
     fecha_reserva_utc        TIMESTAMPTZ   NOT NULL DEFAULT now(),
-    fecha_inicio             TIMESTAMPTZ   NOT NULL,
-    fecha_fin                TIMESTAMPTZ   NOT NULL,
+    fecha_inicio             DATE          NOT NULL,
+    fecha_fin                DATE          NOT NULL,
     subtotal_reserva         NUMERIC(12,2) NOT NULL,
     valor_iva                NUMERIC(12,2) NOT NULL, -- subtotal * porcentaje_iva / 100
     total_reserva            NUMERIC(12,2) NOT NULL, -- subtotal + valor_iva
@@ -96,6 +96,7 @@ CREATE TABLE reservas.reserva (
     es_walkin                BOOLEAN       NOT NULL DEFAULT FALSE,
     es_eliminado             BOOLEAN       NOT NULL DEFAULT FALSE,
     creado_por_usuario       CHAR(30)      NOT NULL,
+    creado_desde_ip          VARCHAR(45)   NULL,
     fecha_registro_utc       TIMESTAMPTZ   NOT NULL DEFAULT now(),
     modificado_por_usuario   CHAR(30)      NULL,
     fecha_modificacion_utc   TIMESTAMPTZ   NULL,
@@ -132,8 +133,8 @@ CREATE TABLE reservas.reserva_habitacion (
     id_reserva               INT           NOT NULL,
     habitacion_guid          UUID          NOT NULL, -- ref logica a alojamiento.habitacion
     tarifa_guid              UUID          NULL,     -- ref logica a alojamiento.tarifa
-    fecha_inicio             TIMESTAMPTZ   NOT NULL,
-    fecha_fin                TIMESTAMPTZ   NOT NULL,
+    fecha_inicio             DATE          NOT NULL,
+    fecha_fin                DATE          NOT NULL,
     num_adultos              INT           NOT NULL DEFAULT 1,
     num_ninos                INT           NOT NULL DEFAULT 0,
     precio_noche_aplicado    NUMERIC(12,2) NOT NULL,
