@@ -37,7 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFinanceClient, FinanceGrpcClient>();
         services.AddSingleton<IStayClient, StayGrpcClient>();
 
-        services.AddSingleton<IAuditEmitter, AuditGrpcEmitter>();
+        services.AddSingleton<IAuditEmitter, AuditRabbitMqEmitter>();
 
         services.AddHttpContextAccessor();
 

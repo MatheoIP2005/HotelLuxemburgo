@@ -3,6 +3,7 @@ using Asp.Versioning;
 using Grpc.AspNetCore.Web;
 using HotelLux.Finance.API.Extensions;
 using HotelLux.Shared.Hosting;
+using HotelLux.Shared.Messaging;
 using HotelLux.Finance.API.Clients;
 using HotelLux.Finance.API.GrpcServices;
 using HotelLux.Finance.API.Middleware;
@@ -16,11 +17,14 @@ using HotelLux.Finance.DataManagement.Interfaces;
 using HotelLux.Finance.DataManagement.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 var builder = WebApplication.CreateBuilder(args);
+builder.ConfigureHotelLuxLogging();
+
 builder.Services.AddApiVersioning(opt =>
 {
     opt.DefaultApiVersion = new ApiVersion(1, 0);
@@ -57,7 +61,8 @@ builder.Services.AddScoped<IFacturaDataService, FacturaDataService>();
 builder.Services.AddScoped<IPagoDataService, PagoDataService>();
 builder.Services.AddScoped<IFacturaService, FacturaService>();
 builder.Services.AddScoped<IPagoService, PagoService>();
-builder.Services.AddSingleton<IAuditEmitter, AuditGrpcClient>();
+builder.Services.AddSingleton<IAuditEmitter, AuditRabbitMqClient>();
+builder.Services.AddHotelLuxRabbitMqPublisher(builder.Configuration);
 
 builder.Services.AddGrpc();
 builder.Services.AddHealthChecks();
@@ -82,5 +87,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapGrpcService<FinanceGrpcService>().EnableGrpcWeb();
 app.MapControllers();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = registration => !registration.Name.Contains("masstransit", StringComparison.OrdinalIgnoreCase)
+});
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = registration => !registration.Name.Contains("masstransit", StringComparison.OrdinalIgnoreCase)
+});
+app.MapHealthChecks("/health/ready");
 app.Run();

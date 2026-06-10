@@ -47,6 +47,7 @@ public class EstadiasController : ControllerBase
         {
             ReservaGuid = reservaGuid,
             ReservaHabitacionGuid = body?.ReservaHabitacionGuid,
+            ObservacionesCheckin = body?.ObservacionesCheckin,
             CreadoPorUsuario = User.Identity?.Name ?? "api_user"
         };
         var data = await _estadia.CheckInAsync(dto, ct);

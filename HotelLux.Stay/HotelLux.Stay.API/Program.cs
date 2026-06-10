@@ -3,14 +3,17 @@ using Asp.Versioning;
 using Grpc.AspNetCore.Web;
 using HotelLux.Stay.API.Extensions;
 using HotelLux.Shared.Hosting;
+using HotelLux.Shared.Messaging;
 using HotelLux.Stay.API.GrpcServices;
 using HotelLux.Stay.API.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 var builder = WebApplication.CreateBuilder(args);
+builder.ConfigureHotelLuxLogging();
 
 builder.Services.AddApiVersioning(opt =>
 {
@@ -47,6 +50,7 @@ builder.Services.AddVersionedSwagger(
     "HotelLux Stay API",
     "Estadías, cargos y valoraciones (endpoints internos).");
 builder.Services.AddStayServices(builder.Configuration);
+builder.Services.AddHotelLuxRabbitMqPublisher(builder.Configuration);
 builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
@@ -64,5 +68,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapGrpcService<StayGrpcService>().EnableGrpcWeb();
 app.MapControllers();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = registration => !registration.Name.Contains("masstransit", StringComparison.OrdinalIgnoreCase)
+});
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = registration => !registration.Name.Contains("masstransit", StringComparison.OrdinalIgnoreCase)
+});
+app.MapHealthChecks("/health/ready");
 app.Run();

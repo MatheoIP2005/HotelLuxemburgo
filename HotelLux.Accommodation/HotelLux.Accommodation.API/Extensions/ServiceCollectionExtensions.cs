@@ -47,7 +47,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICatalogoServicioService, CatalogoServicioService>();
         services.AddScoped<ITipoHabitacionCatalogoService, TipoHabitacionCatalogoService>();
 
-        services.AddSingleton<IAuditEmitter, AuditGrpcEmitter>();
+        services.AddSingleton<IAuditEmitter, AuditRabbitMqEmitter>();
         services.AddSingleton<IStayPublicClient, StayPublicGrpcClient>();
         services.AddScoped<PublicHabitacionesListing>();
 

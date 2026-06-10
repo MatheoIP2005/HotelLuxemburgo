@@ -13,4 +13,14 @@ public interface IHabitacionService
     Task CambiarEstadoAsync(Guid guid, string nuevoEstado, string usuario, CancellationToken ct = default);
     Task InhabilitarAsync(Guid guid, string usuario, CancellationToken ct = default);
     Task EliminarAsync(Guid guid, string usuario, CancellationToken ct = default);
+
+    Task<HabitacionBloqueoResult> ConfirmarBloqueoReservaAsync(
+        Guid habitacionGuid,
+        Guid reservaGuid,
+        CancellationToken ct = default);
+
+    Task<HabitacionBloqueoResult> LiberarBloqueoReservaAsync(
+        Guid habitacionGuid,
+        Guid reservaGuid,
+        CancellationToken ct = default);
 }

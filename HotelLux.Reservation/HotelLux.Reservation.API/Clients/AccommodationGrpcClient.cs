@@ -118,7 +118,7 @@ public class AccommodationGrpcClient : IAccommodationClient
         }
     }
 
-    public async Task<bool> ConfirmRoomLockAsync(
+    public async Task<RoomLockResult> ConfirmRoomLockAsync(
         Guid habitacionGuid, Guid reservaGuid,
         DateOnly fechaInicio, DateOnly fechaFin,
         CancellationToken ct = default)
@@ -135,20 +135,113 @@ public class AccommodationGrpcClient : IAccommodationClient
                 FechaSalida = ToUtcTimestamp(fechaFin)
             }, cancellationToken: ct);
 
-            if (!response.Success)
-                _logger.LogWarning(
-                    "ConfirmRoomLock falló habitacion={Hab} reserva={Res}: {Msg}",
-                    habitacionGuid, reservaGuid, response.Mensaje);
+            if (response.Success)
+            {
+                return new RoomLockResult(
+                    true,
+                    string.IsNullOrWhiteSpace(response.Mensaje)
+                        ? "Habitación bloqueada correctamente."
+                        : response.Mensaje);
+            }
 
-            return response.Success;
+            _logger.LogWarning(
+                "ConfirmRoomLock gRPC falló habitacion={Hab} reserva={Res}: {Msg}. Intentando REST.",
+                habitacionGuid, reservaGuid, response.Mensaje);
+
+            return await ConfirmRoomLockRestAsync(habitacionGuid, reservaGuid, response.Mensaje, ct);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex,
                 "ConfirmRoomLock gRPC error habitacion={Hab} reserva={Res}. Intentando fallback REST.",
                 habitacionGuid, reservaGuid);
-            return await CambiarEstadoRestFallbackAsync(habitacionGuid, "OCU", ct);
+
+            return await ConfirmRoomLockRestAsync(habitacionGuid, reservaGuid, null, ct);
         }
+    }
+
+    private async Task<RoomLockResult> ConfirmRoomLockRestAsync(
+        Guid habitacionGuid,
+        Guid reservaGuid,
+        string? grpcMensaje,
+        CancellationToken ct)
+    {
+        if (_restClient is null || string.IsNullOrWhiteSpace(_fallbackKey))
+        {
+            return new RoomLockResult(
+                false,
+                grpcMensaje ??
+                "No se pudo contactar al servicio de alojamiento (gRPC). " +
+                "Configure RestAddress y FallbackKey en Reservation y reinicie los servicios.");
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"api/v1/internal/render-fallback/habitaciones/{habitacionGuid}/confirmar-bloqueo");
+
+            request.Headers.TryAddWithoutValidation("X-Internal-Service-Key", _fallbackKey);
+            request.Content = JsonContent.Create(new { reservaGuid });
+
+            using var response = await _restClient.SendAsync(request, ct);
+            if (response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadFromJsonAsync<ConfirmarBloqueoRestResponse>(ct);
+                return new RoomLockResult(
+                    true,
+                    body?.Mensaje ?? "Habitación bloqueada mediante REST.");
+            }
+
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogWarning(
+                "ConfirmRoomLock REST falló habitacion={Hab} reserva={Res} status={Status} body={Body}",
+                habitacionGuid,
+                reservaGuid,
+                (int)response.StatusCode,
+                errorBody);
+
+            var parsedMessage = TryParseRestErrorMessage(errorBody);
+            return new RoomLockResult(
+                false,
+                parsedMessage ?? grpcMensaje ??
+                "No se pudo bloquear la habitación en alojamiento. Verifique que Accommodation (5002/5102) esté activo.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "ConfirmRoomLock REST error habitacion={Hab} reserva={Res}",
+                habitacionGuid,
+                reservaGuid);
+
+            return new RoomLockResult(
+                false,
+                grpcMensaje ??
+                "Error de comunicación con alojamiento al bloquear la habitación.");
+        }
+    }
+
+    private static string? TryParseRestErrorMessage(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+            return null;
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("details", out var details) &&
+                details.ValueKind == System.Text.Json.JsonValueKind.Array &&
+                details.GetArrayLength() > 0)
+            {
+                return details[0].GetString();
+            }
+        }
+        catch
+        {
+            // ignore parse errors
+        }
+
+        return null;
     }
 
     public async Task<bool> ReleaseRoomLockAsync(Guid habitacionGuid, Guid reservaGuid, CancellationToken ct = default)
@@ -264,7 +357,7 @@ public class AccommodationGrpcClient : IAccommodationClient
                 $"api/v1/internal/render-fallback/habitaciones/{habitacionGuid}/estado");
 
             request.Headers.TryAddWithoutValidation("X-Internal-Service-Key", _fallbackKey);
-            request.Content = JsonContent.Create(new { nuevoEstado });
+            request.Content = JsonContent.Create(new { NuevoEstado = nuevoEstado });
 
             using var response = await _restClient.SendAsync(request, ct);
             if (response.IsSuccessStatusCode)
@@ -284,6 +377,15 @@ public class AccommodationGrpcClient : IAccommodationClient
                 habitacionGuid, nuevoEstado);
             return false;
         }
+    }
+
+    private sealed class ConfirmarBloqueoRestResponse
+    {
+        [JsonPropertyName("success")]
+        public bool Success { get; init; }
+
+        [JsonPropertyName("mensaje")]
+        public string? Mensaje { get; init; }
     }
 
     private sealed class HabitacionDisponibleRestDto

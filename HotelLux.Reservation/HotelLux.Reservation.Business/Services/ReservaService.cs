@@ -118,6 +118,8 @@ public class ReservaService : IReservaService
         if (errors.Count > 0)
             throw new ValidationException("Datos de reserva inválidos.", errors.ToList());
 
+        await ValidarDisponibilidadHabitacionesAsync(dto.SucursalGuid, dto.Habitaciones, null, ct);
+
         var model = ReservaBusinessMapper.ToDataModel(dto);
         var created = await _reservaDataService.CrearAsync(model, ct);
 
@@ -147,25 +149,48 @@ public class ReservaService : IReservaService
         if (m.EstadoReserva != "PEN")
             throw new ConflictException("Reserva", $"No se puede confirmar una reserva en estado {m.EstadoReserva}.");
 
-        var lockedRooms = new List<Guid>();
+        ValidarLineasHabitacionSinDuplicado(m.Habitaciones.Select(h => h.HabitacionGuid));
+
+        await ValidarDisponibilidadHabitacionesAsync(
+            m.SucursalGuid,
+            m.Habitaciones.Select(h => new ReservaHabitacionCreateDTO
+            {
+                HabitacionGuid = h.HabitacionGuid,
+                FechaInicio = h.FechaInicio,
+                FechaFin = h.FechaFin
+            }),
+            m.ReservaGuid,
+            ct);
+
+        var lineasActivas = m.Habitaciones
+            .Where(h => h.EstadoDetalle == "PEN")
+            .ToList();
+
+        if (lineasActivas.Count == 0)
+        {
+            throw new ConflictException(
+                "Reserva",
+                "No hay líneas de habitación pendientes para confirmar.");
+        }
+
+        var lockedRooms = new HashSet<Guid>();
         var committed = false;
 
         try
         {
-            foreach (var hab in m.Habitaciones)
+            foreach (var hab in lineasActivas)
             {
-                var ok = await _accommodationClient.ConfirmRoomLockAsync(
+                var lockResult = await _accommodationClient.ConfirmRoomLockAsync(
                     hab.HabitacionGuid, m.ReservaGuid,
                     hab.FechaInicio, hab.FechaFin, ct);
 
-                if (!ok)
-                    throw new ConflictException("Reserva",
-                        $"No se pudo bloquear la habitación {hab.HabitacionGuid}. Verifique disponibilidad en alojamiento.");
+                if (!lockResult.Success)
+                    throw new ConflictException("Reserva", lockResult.Message);
 
                 lockedRooms.Add(hab.HabitacionGuid);
             }
 
-            foreach (var hab in m.Habitaciones)
+            foreach (var hab in lineasActivas)
             {
                 await _habitacionDataService.ActualizarEstadoAsync(
                     hab.ReservaHabitacionGuid, "CON", usuario, ct);
@@ -217,7 +242,7 @@ public class ReservaService : IReservaService
         finally
         {
             if (!committed && lockedRooms.Count > 0)
-                await ReleaseLocksAsync(m.ReservaGuid, lockedRooms, ct);
+                await ReleaseLocksAsync(m.ReservaGuid, lockedRooms.ToList(), ct);
         }
     }
 
@@ -301,6 +326,89 @@ public class ReservaService : IReservaService
             null);
     }
 
+    private static void ValidarLineasHabitacionSinDuplicado(IEnumerable<Guid> habitacionGuids)
+    {
+        var duplicadas = habitacionGuids
+            .Where(guid => guid != Guid.Empty)
+            .GroupBy(guid => guid)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToList();
+
+        if (duplicadas.Count == 0)
+            return;
+
+        throw new ConflictException(
+            "Reserva",
+            "La misma habitación está repetida en más de una línea. Elimine las líneas duplicadas antes de continuar.");
+    }
+
+    private async Task ValidarDisponibilidadHabitacionesAsync(
+        Guid sucursalGuid,
+        IEnumerable<ReservaHabitacionCreateDTO> habitaciones,
+        Guid? excludeReservaGuid = null,
+        CancellationToken ct = default)
+    {
+        var lineas = habitaciones
+            .Where(h => h.HabitacionGuid != Guid.Empty)
+            .ToList();
+
+        if (lineas.Count == 0)
+            return;
+
+        ValidarLineasHabitacionSinDuplicado(lineas.Select(h => h.HabitacionGuid));
+
+        var conflictos = new List<string>();
+
+        foreach (var linea in lineas)
+        {
+            if (excludeReservaGuid.HasValue &&
+                excludeReservaGuid.Value != Guid.Empty &&
+                await _habitacionDataService.ExisteSolapamientoConfirmadoAsync(
+                    linea.HabitacionGuid,
+                    linea.FechaInicio,
+                    linea.FechaFin,
+                    excludeReservaGuid.Value,
+                    ct))
+            {
+                conflictos.Add(
+                    $"La habitación ya está asignada a otra reserva confirmada del {linea.FechaInicio:dd/MM/yyyy} al {linea.FechaFin:dd/MM/yyyy}.");
+                continue;
+            }
+
+            var disponibles = await _accommodationClient.ListarDisponiblesAsync(
+                sucursalGuid,
+                linea.FechaInicio,
+                linea.FechaFin,
+                ct: ct);
+
+            if (disponibles.Count == 0)
+            {
+                conflictos.Add(
+                    $"No se pudo verificar disponibilidad del {linea.FechaInicio:dd/MM/yyyy} al {linea.FechaFin:dd/MM/yyyy}. " +
+                    "Confirme que el servicio de alojamiento (gRPC :5102) esté activo, o que la habitación no esté ocupada (OCU).");
+                continue;
+            }
+
+            if (disponibles.Any(d => d.HabitacionGuid == linea.HabitacionGuid))
+                continue;
+
+            if (excludeReservaGuid.HasValue &&
+                excludeReservaGuid.Value != Guid.Empty)
+            {
+                // Sin otra reserva CON solapada: puede ser OCU por un intento de confirmación anterior fallido.
+                continue;
+            }
+
+            conflictos.Add(
+                $"La habitación asignada no está disponible del {linea.FechaInicio:dd/MM/yyyy} al {linea.FechaFin:dd/MM/yyyy}. " +
+                "Está ocupada, en mantenimiento o bloqueada por otra reserva.");
+        }
+
+        if (conflictos.Count > 0)
+            throw new ConflictException("Reserva", string.Join(" ", conflictos));
+    }
+
     private async Task ReleaseLocksAsync(Guid reservaGuid, IReadOnlyList<Guid> habitacionGuids, CancellationToken ct)
     {
         foreach (var habGuid in habitacionGuids)
@@ -375,11 +483,10 @@ public class ReservaService : IReservaService
         {
             if (estadoLinea == "CON")
             {
-                var ok = await _accommodationClient.ConfirmRoomLockAsync(
+                var lockResult = await _accommodationClient.ConfirmRoomLockAsync(
                     dto.HabitacionGuid, m.ReservaGuid, dto.FechaInicio, dto.FechaFin, ct);
-                if (!ok)
-                    throw new ConflictException("Reserva",
-                        $"No se pudo bloquear la habitación {dto.HabitacionGuid}. Verifique disponibilidad en alojamiento.");
+                if (!lockResult.Success)
+                    throw new ConflictException("Reserva", lockResult.Message);
                 needsRelease = true;
             }
 

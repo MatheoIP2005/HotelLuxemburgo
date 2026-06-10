@@ -1,5 +1,5 @@
 Auditoria
-Auditoría — solo lectura. Los registros se insertan automáticamente mediante triggers de base de datos.
+Auditoría — solo lectura. Los registros se insertan desde eventos de auditoría consumidos por HotelLux.Audit.API desde RabbitMQ.
 GET
 /api/v1/internal/auditoria
 Listar registros de auditoría (paginado, filtrable por tabla/fecha/usuario)

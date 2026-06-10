@@ -28,6 +28,75 @@ public sealed class InternalRoomLockFallbackController : ControllerBase
 
     public sealed record CambiarEstadoRequest(string NuevoEstado);
 
+    public sealed record ConfirmarBloqueoRequest(Guid ReservaGuid);
+
+    [HttpPost("{habitacionGuid:guid}/confirmar-bloqueo")]
+    public async Task<IActionResult> ConfirmarBloqueo(
+        Guid habitacionGuid,
+        [FromBody] ConfirmarBloqueoRequest request,
+        CancellationToken ct)
+    {
+        if (!IsAuthorized())
+            return Unauthorized(new
+            {
+                status = 401,
+                error = "No autorizado",
+                details = new[] { "Clave interna requerida o invalida." },
+                timestamp = DateTime.UtcNow
+            });
+
+        var result = await _habitaciones.ConfirmarBloqueoReservaAsync(
+            habitacionGuid,
+            request.ReservaGuid,
+            ct);
+
+        if (!result.Success)
+        {
+            return Conflict(new
+            {
+                status = 409,
+                error = "Conflicto",
+                details = new[] { result.Message },
+                timestamp = DateTime.UtcNow
+            });
+        }
+
+        return Ok(new
+        {
+            success = true,
+            mensaje = result.Message,
+            timestamp = DateTime.UtcNow
+        });
+    }
+
+    [HttpPost("{habitacionGuid:guid}/liberar-bloqueo")]
+    public async Task<IActionResult> LiberarBloqueo(
+        Guid habitacionGuid,
+        [FromBody] ConfirmarBloqueoRequest request,
+        CancellationToken ct)
+    {
+        if (!IsAuthorized())
+            return Unauthorized(new
+            {
+                status = 401,
+                error = "No autorizado",
+                details = new[] { "Clave interna requerida o invalida." },
+                timestamp = DateTime.UtcNow
+            });
+
+        var result = await _habitaciones.LiberarBloqueoReservaAsync(
+            habitacionGuid,
+            request.ReservaGuid,
+            ct);
+
+        return Ok(new
+        {
+            success = result.Success,
+            mensaje = result.Message,
+            timestamp = DateTime.UtcNow
+        });
+    }
+
     [HttpPatch("{habitacionGuid:guid}/estado")]
     public async Task<IActionResult> CambiarEstado(
         Guid habitacionGuid,

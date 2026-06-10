@@ -25,7 +25,7 @@ public interface IAccommodationClient
         CancellationToken ct = default);
 
     /// <summary>Bloquea la habitación (DIS→OCU). Requiere fechas para el contrato gRPC.</summary>
-    Task<bool> ConfirmRoomLockAsync(
+    Task<RoomLockResult> ConfirmRoomLockAsync(
         Guid habitacionGuid, Guid reservaGuid,
         DateOnly fechaInicio, DateOnly fechaFin,
         CancellationToken ct = default);

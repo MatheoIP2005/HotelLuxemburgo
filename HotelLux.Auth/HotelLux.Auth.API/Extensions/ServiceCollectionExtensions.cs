@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddHttpContextAccessor();
-        services.AddSingleton<IAuditEmitter, AuditGrpcEmitter>();
+        services.AddSingleton<IAuditEmitter, AuditRabbitMqEmitter>();
 
         services.AddDbContext<AuthDbContext>(options =>
             options.UseNpgsql(

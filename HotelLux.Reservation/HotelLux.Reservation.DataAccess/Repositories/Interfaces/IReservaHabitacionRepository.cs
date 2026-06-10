@@ -11,4 +11,11 @@ public interface IReservaHabitacionRepository
     Task AgregarAsync(ReservaHabitacionEntity entity, CancellationToken ct = default);
     void Actualizar(ReservaHabitacionEntity entity);
     void Eliminar(ReservaHabitacionEntity entity);
+
+    Task<bool> ExisteSolapamientoConfirmadoAsync(
+        Guid habitacionGuid,
+        DateOnly fechaInicio,
+        DateOnly fechaFin,
+        Guid excludeReservaGuid,
+        CancellationToken ct = default);
 }

@@ -661,3 +661,53 @@ SELECT
 FROM   reservas.reserva r
 JOIN   reservas.cliente c ON c.id_cliente = r.id_cliente
 ORDER  BY r.fecha_inicio;
+
+
+ALTER TABLE reservas.cliente 
+ALTER COLUMN razon_social SET DEFAULT 'NAT';
+
+-- 1. Eliminar el CHECK viejo
+ALTER TABLE reservas.reserva 
+    DROP CONSTRAINT chk_reserva_origen;
+
+-- 2. Cambiar CHAR(10) → VARCHAR(50)
+ALTER TABLE reservas.reserva 
+    ALTER COLUMN origen_canal_reserva TYPE VARCHAR(50);
+
+-- 3. Nuevo CHECK que acepta los valores reales del app
+ALTER TABLE reservas.reserva 
+    ADD CONSTRAINT chk_reserva_origen 
+    CHECK (origen_canal_reserva IN (
+        'PORTAL', 'ADMIN', 'WALKIN',
+        'BOOKING_PUBLIC', 'WEB_BOOKING', 'PUBLIC', 
+        'PORTAL_WEB', 'API', 'DIRECT'
+    ));
+
+
+-- creado_por_usuario / modificado_por_usuario (pueden recibir emails o GUIDs)
+ALTER TABLE reservas.cliente 
+    ALTER COLUMN creado_por_usuario TYPE VARCHAR(100);
+ALTER TABLE reservas.cliente 
+    ALTER COLUMN modificado_por_usuario TYPE VARCHAR(100);
+
+ALTER TABLE reservas.reserva 
+    ALTER COLUMN creado_por_usuario TYPE VARCHAR(100);
+ALTER TABLE reservas.reserva 
+    ALTER COLUMN modificado_por_usuario TYPE VARCHAR(100);
+
+ALTER TABLE reservas.reserva_habitacion 
+    ALTER COLUMN creado_por_usuario TYPE VARCHAR(100);
+ALTER TABLE reservas.reserva_habitacion 
+    ALTER COLUMN modificado_por_usuario TYPE VARCHAR(100);
+
+-- codigo_reserva CHAR(20) — 'RES-2026-000001' = 16 chars, OK por ahora
+-- telefono CHAR(10) — 10 dígitos exactos, bien
+-- modificacion_ip CHAR(25) — IPv6 puede tener hasta 39 chars, mejor ampliar
+ALTER TABLE reservas.cliente 
+    ALTER COLUMN modificacion_ip TYPE VARCHAR(45);
+ALTER TABLE reservas.reserva 
+    ALTER COLUMN modificacion_ip TYPE VARCHAR(45);
+ALTER TABLE reservas.reserva_habitacion 
+    ALTER COLUMN modificacion_ip TYPE VARCHAR(45);
+
+ALTER TABLE reservas.reserva DROP CONSTRAINT chk_reserva_origen;

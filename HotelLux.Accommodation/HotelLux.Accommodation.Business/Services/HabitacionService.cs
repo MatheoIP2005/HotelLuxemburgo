@@ -150,4 +150,85 @@ public class HabitacionService : IHabitacionService
             string.Empty, usuario, null,
             JsonSerializer.Serialize(existente), null);
     }
+
+    public async Task<HabitacionBloqueoResult> ConfirmarBloqueoReservaAsync(
+        Guid habitacionGuid,
+        Guid reservaGuid,
+        CancellationToken ct = default)
+    {
+        var habitacion = await _dataService.ObtenerPorGuidAsync(habitacionGuid, ct);
+        if (habitacion is null)
+        {
+            return new HabitacionBloqueoResult(
+                false,
+                $"Habitación {habitacionGuid} no encontrada.");
+        }
+
+        if (habitacion.EstadoHabitacion == "OCU")
+        {
+            return new HabitacionBloqueoResult(
+                true,
+                $"Habitación {habitacion.NumeroHabitacion} ya estaba bloqueada (OCU).");
+        }
+
+        if (habitacion.EstadoHabitacion != "DIS")
+        {
+            return new HabitacionBloqueoResult(
+                false,
+                $"Habitación {habitacion.NumeroHabitacion} no está disponible " +
+                $"(estado actual: {habitacion.EstadoHabitacion}). " +
+                "Libérela en alojamiento (estado DIS) o elija otra habitación.");
+        }
+
+        await _dataService.CambiarEstadoAsync(
+            habitacionGuid,
+            "OCU",
+            "reservation-lock",
+            ct);
+
+        _audit.EmitFireAndForget(
+            "accommodation-service",
+            "alojamiento.habitacion",
+            "LOCK",
+            habitacionGuid.ToString(),
+            habitacion.IdHabitacion.ToString(),
+            reservaGuid.ToString(),
+            "reservation-lock",
+            null,
+            JsonSerializer.Serialize(new { estado = "DIS" }),
+            JsonSerializer.Serialize(new { estado = "OCU", reserva_guid = reservaGuid }));
+
+        return new HabitacionBloqueoResult(
+            true,
+            $"Habitación {habitacion.NumeroHabitacion} bloqueada correctamente.");
+    }
+
+    public async Task<HabitacionBloqueoResult> LiberarBloqueoReservaAsync(
+        Guid habitacionGuid,
+        Guid reservaGuid,
+        CancellationToken ct = default)
+    {
+        var habitacion = await _dataService.ObtenerPorGuidAsync(habitacionGuid, ct);
+        if (habitacion is null)
+        {
+            return new HabitacionBloqueoResult(
+                false,
+                $"Habitación {habitacionGuid} no encontrada.");
+        }
+
+        if (habitacion.EstadoHabitacion == "DIS")
+        {
+            return new HabitacionBloqueoResult(true, "Habitación ya estaba disponible.");
+        }
+
+        await _dataService.CambiarEstadoAsync(
+            habitacionGuid,
+            "DIS",
+            "reservation-saga",
+            ct);
+
+        return new HabitacionBloqueoResult(
+            true,
+            $"Habitación {habitacion.NumeroHabitacion} liberada correctamente.");
+    }
 }

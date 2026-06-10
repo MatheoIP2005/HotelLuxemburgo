@@ -75,24 +75,25 @@ public class ReservationGrpcService : ReservationService.ReservationServiceBase
             return Invalid($"La reserva no está confirmada (estado: {m.EstadoReserva}).");
 
         var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
-        if (hoy < m.FechaInicio || hoy > m.FechaFin)
+        if (hoy > m.FechaFin)
         {
             return Invalid(
-                $"Check-in no permitido en la fecha actual (permitido entre {ToIsoDate(m.FechaInicio)} y {ToIsoDate(m.FechaFin)}).");
+                $"Check-in no permitido: la reserva ya finalizó el {ToIsoDate(m.FechaFin)}.");
         }
 
         if (m.Habitaciones.Count == 0)
             return Invalid("La reserva no tiene líneas de habitación.");
 
         var lineasConHabitacion = m.Habitaciones
-            .Where(h => h.HabitacionGuid != Guid.Empty)
+            .Where(h => h.HabitacionGuid != Guid.Empty && h.EstadoDetalle == "CON")
             .ToList();
 
         if (lineasConHabitacion.Count == 0)
-            return Invalid("No hay habitaciones físicas asignadas en la reserva.");
-
-        if (lineasConHabitacion.Any(h => h.EstadoDetalle != "CON"))
-            return Invalid("Existen líneas de habitación que no están confirmadas (CON).");
+        {
+            return Invalid(
+                "No hay líneas de habitación confirmadas (CON) para hacer check-in. " +
+                "Confirme la reserva antes de registrar la estadía.");
+        }
 
         var resp = new ValidateReservationForCheckinResponse
         {

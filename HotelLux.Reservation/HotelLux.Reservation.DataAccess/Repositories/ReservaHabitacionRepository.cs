@@ -33,4 +33,23 @@ public class ReservaHabitacionRepository : IReservaHabitacionRepository
     public void Actualizar(ReservaHabitacionEntity entity) => _context.ReservasHabitaciones.Update(entity);
 
     public void Eliminar(ReservaHabitacionEntity entity) => _context.ReservasHabitaciones.Remove(entity);
+
+    public async Task<bool> ExisteSolapamientoConfirmadoAsync(
+        Guid habitacionGuid,
+        DateOnly fechaInicio,
+        DateOnly fechaFin,
+        Guid excludeReservaGuid,
+        CancellationToken ct = default)
+        => await _context.ReservasHabitaciones.AsNoTracking()
+            .Include(rh => rh.Reserva)
+            .AnyAsync(
+                rh =>
+                    rh.HabitacionGuid == habitacionGuid &&
+                    rh.Reserva.ReservaGuid != excludeReservaGuid &&
+                    !rh.Reserva.EsEliminado &&
+                    rh.Reserva.EstadoReserva == "CON" &&
+                    rh.EstadoDetalle == "CON" &&
+                    rh.FechaInicio < fechaFin &&
+                    rh.FechaFin > fechaInicio,
+                ct);
 }

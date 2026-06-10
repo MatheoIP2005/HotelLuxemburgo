@@ -196,8 +196,8 @@ public sealed class GatewayEndpointSpecCatalog
         {
             foreach (var candidate in new[]
                      {
-                         Path.Combine(dir, fileName),
-                         Path.Combine(dir, "docs", fileName)
+                         System.IO.Path.Combine(dir, fileName),
+                         System.IO.Path.Combine(dir, "docs", fileName)
                      })
             {
                 if (File.Exists(candidate))

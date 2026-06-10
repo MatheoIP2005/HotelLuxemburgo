@@ -15,6 +15,37 @@
 > ⚠️ **Advertencia de cold start:** Render free duerme servicios después de 15 min sin tráfico.
 > El primer request después de inactividad tarda ~30 segundos. Para demos, visitá cada URL antes de la presentación.
 
+**Matriz de variables por servicio:** [`docs/render_env_matrix.md`](docs/render_env_matrix.md)
+
+---
+
+## Checklist final antes del deploy
+
+1. Ejecutar `scripts/Test-Backend.ps1` (build + tests).
+2. Confirmar que Docker Desktop / RabbitMQ local son solo para pruebas locales.
+3. Tener CloudAMQP u otro broker RabbitMQ externo listo (no `localhost` en Render).
+4. Cargar variables en cada servicio según [`docs/render_env_matrix.md`](docs/render_env_matrix.md).
+5. **Manual Deploy** en orden: Audit → Auth → Finance → Accommodation → Reservation → Stay → Gateway.
+6. Probar `/health`, `/health/live` y `/health/ready` en cada servicio.
+7. Probar GraphQL en Gateway (`POST /graphql` con `{ __typename }`).
+8. Probar login u otra operación que genere un evento de auditoría.
+
+Smoke remoto automatizado:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/Test-RenderSmoke.ps1 `
+  -GatewayBaseUrl "https://hotellux-gateway.onrender.com" `
+  -AuditBaseUrl "https://hotellux-audit.onrender.com" `
+  -AuthBaseUrl "https://hotellux-auth.onrender.com" `
+  -AccommodationBaseUrl "https://hotellux-accommodation.onrender.com" `
+  -ReservationBaseUrl "https://hotellux-reservation.onrender.com" `
+  -StayBaseUrl "https://hotellux-stay.onrender.com" `
+  -FinanceBaseUrl "https://hotellux-finance.onrender.com" `
+  -RequireServiceReady
+```
+
+En planes free de Render puede haber cold start; si falla por timeout, esperar ~30 s y repetir.
+
 ---
 
 ## PASO 1 — Subir el código a GitHub
@@ -166,15 +197,65 @@ El build de .NET tarda ~5-10 min la primera vez. El servicio va a quedar en erro
 
 ## PASO 4 — Variables de entorno en Render
 
-Una vez que tengas las URLs reales de cada servicio, andá a cada uno → **Environment** → y agregá estas variables:
+Una vez que tengas las URLs reales de cada servicio, andá a cada uno → **Environment** → y agregá estas variables.
 
-### 🟠 AUDIT (`hotellux-audit`)
+### RabbitMQ en producción
+
+Los microservicios en Render **no** usan Docker local ni `localhost` para RabbitMQ. Necesitás un **broker RabbitMQ externo gestionado**.
+
+**Recomendado:** [CloudAMQP](https://www.cloudamqp.com/) u otro proveedor compatible con AMQP.
+
+**Alternativa:** desplegar RabbitMQ como servicio propio (Docker + disco persistente) solo si el equipo quiere operar el broker.
+
+Variables comunes para **todos** los publishers y para Audit (consumer). Elegí **una** de estas opciones:
+
+#### Opción A recomendada: URL completa
+
+```text
+RabbitMq__Uri=amqps://<usuario>:<password>@<host>:5671/<vhost>
+RabbitMq__AuditQueue=hotellux.audit.events
+```
+
+O usando la variable del proveedor (fallback si `RabbitMq__Uri` no está configurado):
+
+```text
+CLOUDAMQP_URL=amqps://<usuario>:<password>@<host>:5671/<vhost>
+RabbitMq__AuditQueue=hotellux.audit.events
+```
+
+- `amqp://` usa puerto **5672** por defecto.
+- `amqps://` usa puerto **5671** y TLS/SSL.
+
+#### Opción B: variables separadas
+
+```text
+RabbitMq__Host=<host del broker>
+RabbitMq__Port=5671
+RabbitMq__VirtualHost=<vhost>
+RabbitMq__Username=<usuario>
+RabbitMq__Password=<password>
+RabbitMq__UseSsl=true
+RabbitMq__AuditQueue=hotellux.audit.events
+```
+
+- Sin TLS: `RabbitMq__Port=5672`, `RabbitMq__UseSsl=false`.
+- En Render **no** usar `localhost`.
+
+> ⚠️ No inventes credenciales en el repo. Configuralas solo en Render / el panel del proveedor.
+
+**Legacy temporal (no usar como camino principal de auditoría):** `AuditService__GrpcAddress` quedó obsoleto para publishers; la auditoría va por RabbitMQ. No es necesario configurarlo en servicios nuevos.
+
+### 🟠 AUDIT (`hotellux-audit`) — consumer RabbitMQ
+
 ```
 ConnectionStrings__AuditDb   = Host=db.XXXX.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=TU-PASS;SSL Mode=Require;Trust Server Certificate=true;Search Path=auditoria
 Jwt__Key                     = HotelLuxemburgo_AccessSecret_MinimoTrentaYDosCaracteres_2026
+# RabbitMQ: Opción A (Uri) o B (Host/Port/UseSsl) — ver sección anterior
+RabbitMq__AuditQueue         = hotellux.audit.events
 ```
 
-### 🔵 AUTH (`hotellux-auth`)
+### 🔵 AUTH (`hotellux-auth`) — publisher auditoría
+
 ```
 ConnectionStrings__AuthDb              = Host=db.XXXX.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=TU-PASS;SSL Mode=Require;Trust Server Certificate=true
 JwtSettings__JwtSecret                 = HotelLuxemburgo_AccessSecret_MinimoTrentaYDosCaracteres_2026
@@ -183,45 +264,72 @@ JwtSettings__Issuer                    = HotelLuxemburgo.Auth
 JwtSettings__Audience                  = HotelLuxemburgo.Services
 JwtSettings__JwtExpiresIn              = 3600
 JwtSettings__JwtRefreshExpiresIn       = 604800
-AuditService__GrpcAddress              = https://hotellux-audit.onrender.com
+RabbitMq__Host                         = <host broker>
+RabbitMq__VirtualHost                  = <vhost>
+RabbitMq__Username                     = <usuario>
+RabbitMq__Password                     = <password>
+RabbitMq__AuditQueue                   = hotellux.audit.events
 ```
 
 ### 🟢 ACCOMMODATION (`hotellux-accommodation`)
+
 ```
 ConnectionStrings__AccommodationDb   = Host=db.XXXX.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=TU-PASS;SSL Mode=Require;Trust Server Certificate=true;Search Path=accommodation
 Jwt__Key                             = HotelLuxemburgo_AccessSecret_MinimoTrentaYDosCaracteres_2026
-AuditService__GrpcAddress            = https://hotellux-audit.onrender.com
 StayService__GrpcAddress             = https://hotellux-stay.onrender.com
+RabbitMq__Host                       = <host broker>
+RabbitMq__VirtualHost                = <vhost>
+RabbitMq__Username                   = <usuario>
+RabbitMq__Password                   = <password>
+RabbitMq__AuditQueue                 = hotellux.audit.events
 ```
 
 ### 🟡 FINANCE (`hotellux-finance`)
+
 ```
 ConnectionStrings__FinanceDb   = Host=db.XXXX.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=TU-PASS;SSL Mode=Require;Trust Server Certificate=true;Search Path=finanzas
 Jwt__Key                       = HotelLuxemburgo_AccessSecret_MinimoTrentaYDosCaracteres_2026
-AuditService__GrpcAddress      = https://hotellux-audit.onrender.com
+RabbitMq__Host                 = <host broker>
+RabbitMq__VirtualHost          = <vhost>
+RabbitMq__Username             = <usuario>
+RabbitMq__Password             = <password>
+RabbitMq__AuditQueue           = hotellux.audit.events
 ```
 
 ### 🟣 RESERVATION (`hotellux-reservation`)
+
 ```
 ConnectionStrings__ReservationDb   = Host=db.XXXX.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=TU-PASS;SSL Mode=Require;Trust Server Certificate=true;Search Path=reservas
 Jwt__Key                           = HotelLuxemburgo_AccessSecret_MinimoTrentaYDosCaracteres_2026
 AccommodationService__GrpcAddress  = https://hotellux-accommodation.onrender.com
 FinanceService__GrpcAddress        = https://hotellux-finance.onrender.com
 StayService__GrpcAddress           = https://hotellux-stay.onrender.com
-AuditService__GrpcAddress          = https://hotellux-audit.onrender.com
+RabbitMq__Host                     = <host broker>
+RabbitMq__VirtualHost              = <vhost>
+RabbitMq__Username                 = <usuario>
+RabbitMq__Password                 = <password>
+RabbitMq__AuditQueue               = hotellux.audit.events
 ```
 
 ### 🔴 STAY (`hotellux-stay`)
+
 ```
 ConnectionStrings__StayDb          = Host=db.XXXX.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=TU-PASS;SSL Mode=Require;Trust Server Certificate=true;Search Path=hospedaje
 Jwt__Key                           = HotelLuxemburgo_AccessSecret_MinimoTrentaYDosCaracteres_2026
 ReservationService__GrpcAddress    = https://hotellux-reservation.onrender.com
 AccommodationService__GrpcAddress  = https://hotellux-accommodation.onrender.com
 FinanceService__GrpcAddress        = https://hotellux-finance.onrender.com
-AuditService__GrpcAddress          = https://hotellux-audit.onrender.com
+RabbitMq__Host                     = <host broker>
+RabbitMq__VirtualHost              = <vhost>
+RabbitMq__Username                 = <usuario>
+RabbitMq__Password                 = <password>
+RabbitMq__AuditQueue               = hotellux.audit.events
 ```
 
-### ⚫ GATEWAY (`hotellux-gateway`)
+### ⚫ GATEWAY (`hotellux-gateway`) — sin RabbitMQ
+
+Expone REST/YARP, Swagger y GraphQL en `/graphql`. No requiere `RabbitMq__...`.
+
 ```
 ReverseProxy__Clusters__accommodation__Destinations__api__Address   = https://hotellux-accommodation.onrender.com/
 ReverseProxy__Clusters__reservation__Destinations__api__Address     = https://hotellux-reservation.onrender.com/
@@ -240,13 +348,60 @@ ReverseProxy__Clusters__audit__Destinations__api__Address           = https://ho
 1. Después de agregar las vars de entorno, hacé **"Manual Deploy"** en cada servicio
 2. Verificá en los logs que arranque sin errores
 3. El orden de arranque importa para el primer health check. Esperá que estén listos en este orden:
-   - Audit → Auth → Finance → Accommodation → Reservation → Stay → Gateway
+   - Broker RabbitMQ (externo) → Audit → Auth → Finance → Accommodation → Reservation → Stay → Gateway
 
 ### URL pública de tu API
 
 Una vez todo listo, el endpoint principal es:
 ```
 https://hotellux-gateway.onrender.com
+```
+
+### Verificación post-deploy
+
+**Gateway** (liveness + GraphQL):
+
+```text
+GET  https://<gateway>.onrender.com/health
+GET  https://<gateway>.onrender.com/health/ready
+POST https://<gateway>.onrender.com/graphql
+     Body: { "query": "{ __typename }" }
+```
+
+**Servicios con RabbitMQ** (readiness del bus):
+
+```text
+GET https://<audit>.onrender.com/health/ready
+GET https://<accommodation>.onrender.com/health/ready
+GET https://<reservation>.onrender.com/health/ready
+GET https://<auth>.onrender.com/health/ready
+GET https://<stay>.onrender.com/health/ready
+GET https://<finance>.onrender.com/health/ready
+```
+
+Resultados esperados:
+
+- RabbitMQ bien configurado: `/health/ready` → **200**
+- RabbitMQ mal configurado o inaccesible: `/health/ready` → **503**
+- `/health` puede seguir en **200** aunque RabbitMQ esté caído (es liveness)
+
+Scripts de verificación:
+
+```powershell
+# Local (Gateway en 127.0.0.1:5000)
+powershell -ExecutionPolicy Bypass -File scripts/Test-GatewayHealth.ps1
+powershell -ExecutionPolicy Bypass -File scripts/Test-GatewayHealth.ps1 -RequireReady
+
+# Remoto (Render) — ver docs/render_env_matrix.md
+powershell -ExecutionPolicy Bypass -File scripts/Test-RenderSmoke.ps1 `
+  -GatewayBaseUrl "https://hotellux-gateway.onrender.com" `
+  -AuditBaseUrl "https://hotellux-audit.onrender.com" `
+  -AuthBaseUrl "https://hotellux-auth.onrender.com" `
+  -AccommodationBaseUrl "https://hotellux-accommodation.onrender.com" `
+  -ReservationBaseUrl "https://hotellux-reservation.onrender.com" `
+  -StayBaseUrl "https://hotellux-stay.onrender.com" `
+  -FinanceBaseUrl "https://hotellux-finance.onrender.com" `
+  -RequireServiceReady
 ```
 
 ### Test rápido desde el browser
@@ -298,5 +453,7 @@ GRPC_USE_WEB = false
 | `Request protocol 'HTTP/1.1' is not supported` | `RENDER` no está en `true` o gRPC-Web no activo | Verificar que Render inyecte `RENDER=true`; o setear `GRPC_USE_WEB=true` manualmente |
 | `Connection refused` en gRPC | URL del servicio incorrecta o servicio dormido | Verificar URL en env vars; esperar que el servicio despierte |
 | `Jwt:Key no configurada` | Falta variable de entorno | Agregar `Jwt__Key` en Render |
+| `/health/ready` → 503 | RabbitMQ inaccesible o vars `RabbitMq__...` incorrectas | Verificar broker externo; no usar `localhost` en Render |
+| Eventos de auditoría no persisten | Audit sin consumer o cola mal configurada | Verificar `RabbitMq__AuditQueue` y que Audit esté arriba con `/health/ready` 200 |
 | Build falla: `protos not found` | Dockerfile con context incorrecto | El build context debe ser la raíz del repo |
 | `no existe la columna creado_desde_ip` | Falta ejecutar el fix SQL de Reservation | Correr el ALTER TABLE del Paso 2.4 en Supabase |

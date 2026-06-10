@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAccommodationStayClient, AccommodationStayGrpcClient>();
         services.AddSingleton<IFinanceStayClient, FinanceStayGrpcClient>();
         services.AddScoped<IValoracionService, ValoracionService>();
-        services.AddSingleton<IAuditEmitter, AuditGrpcEmitter>();
+        services.AddSingleton<IAuditEmitter, AuditRabbitMqEmitter>();
         services.AddHttpContextAccessor();
         return services;
     }

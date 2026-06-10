@@ -57,4 +57,17 @@ public class ReservaHabitacionDataService : IReservaHabitacionDataService
         await _uow.SaveChangesAsync(ct);
         return true;
     }
+
+    public Task<bool> ExisteSolapamientoConfirmadoAsync(
+        Guid habitacionGuid,
+        DateOnly fechaInicio,
+        DateOnly fechaFin,
+        Guid excludeReservaGuid,
+        CancellationToken ct = default)
+        => _uow.ReservaHabitacionRepository.ExisteSolapamientoConfirmadoAsync(
+            habitacionGuid,
+            fechaInicio,
+            fechaFin,
+            excludeReservaGuid,
+            ct);
 }

@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using HotelLux.Reservation.API.Helpers;
 using HotelLux.Reservation.API.Models.Common;
 using HotelLux.Reservation.Business;
 using HotelLux.Reservation.Business.DTOs.Common;
@@ -93,6 +94,7 @@ public class ReservasController : ControllerBase
     {
         dto.CreadoPorUsuario ??= User.Identity?.Name ?? "api_user";
         dto.CreadoDesdeIp ??= HttpContext.Connection.RemoteIpAddress?.ToString();
+        ReservaCreateDtoMarketplaceNormalizer.Apply(dto);
         var data = await _service.CrearAsync(dto, ct);
         return StatusCode(201, ApiResponse<ReservaDTO>.Created(data));
     }

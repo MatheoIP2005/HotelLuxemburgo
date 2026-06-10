@@ -10,6 +10,7 @@ namespace HotelLux.Accommodation.API.GrpcServices;
 public class AccommodationGrpcService : AccommodationService.AccommodationServiceBase
 {
     private readonly IHabitacionDataService _habitacionDataService;
+    private readonly IHabitacionService _habitacionService;
     private readonly ITarifaDataService _tarifaDataService;
     private readonly IAuditEmitter _audit;
     private readonly ILogger<AccommodationGrpcService> _logger;
@@ -19,11 +20,13 @@ public class AccommodationGrpcService : AccommodationService.AccommodationServic
 
     public AccommodationGrpcService(
         IHabitacionDataService habitacionDataService,
+        IHabitacionService habitacionService,
         ITarifaDataService tarifaDataService,
         IAuditEmitter audit,
         ILogger<AccommodationGrpcService> logger)
     {
         _habitacionDataService = habitacionDataService;
+        _habitacionService = habitacionService;
         _tarifaDataService = tarifaDataService;
         _audit = audit;
         _logger = logger;
@@ -103,61 +106,29 @@ public class AccommodationGrpcService : AccommodationService.AccommodationServic
             };
         }
 
-        var habitacion = await _habitacionDataService
-            .ObtenerPorGuidAsync(habitacionGuid, context.CancellationToken);
-
-        if (habitacion is null)
+        if (!Guid.TryParse(request.ReservaGuid, out var reservaGuid))
         {
-            _logger.LogWarning("ConfirmRoomLock: habitación {Guid} no encontrada", habitacionGuid);
-            return new ConfirmRoomLockResponse
-            {
-                Success = false,
-                Mensaje = $"Habitación {habitacionGuid} no encontrada."
-            };
+            reservaGuid = Guid.Empty;
         }
 
-        if (habitacion.EstadoHabitacion != "DIS")
+        var result = await _habitacionService.ConfirmarBloqueoReservaAsync(
+            habitacionGuid,
+            reservaGuid,
+            context.CancellationToken);
+
+        if (!result.Success)
         {
             _logger.LogWarning(
-                "ConfirmRoomLock: habitación {Guid} no está disponible (estado={Estado})",
-                habitacionGuid, habitacion.EstadoHabitacion);
-            return new ConfirmRoomLockResponse
-            {
-                Success = false,
-                Mensaje = $"Habitación {habitacion.NumeroHabitacion} no está disponible " +
-                          $"(estado actual: {habitacion.EstadoHabitacion})."
-            };
+                "ConfirmRoomLock: habitación {Guid} reserva={Reserva}: {Msg}",
+                habitacionGuid,
+                request.ReservaGuid,
+                result.Message);
         }
-
-        var estadoAnterior = habitacion.EstadoHabitacion;
-
-        await _habitacionDataService.CambiarEstadoAsync(
-            habitacionGuid, "OCU", "grpc_reservation", context.CancellationToken);
-
-        _audit.EmitFireAndForget(
-            "accommodation-service",
-            "alojamiento.habitacion",
-            "LOCK",
-            habitacionGuid.ToString(),
-            habitacion.IdHabitacion.ToString(),
-            Guid.Empty.ToString(),
-            "grpc_reservation",
-            null,
-            System.Text.Json.JsonSerializer.Serialize(new { estado = estadoAnterior }),
-            System.Text.Json.JsonSerializer.Serialize(new
-            {
-                estado = "OCU",
-                reserva_guid = request.ReservaGuid
-            }));
-
-        _logger.LogInformation(
-            "ConfirmRoomLock: habitación {NumHab} ({Guid}) → OCU para reserva {ReservaGuid}",
-            habitacion.NumeroHabitacion, habitacionGuid, request.ReservaGuid);
 
         return new ConfirmRoomLockResponse
         {
-            Success = true,
-            Mensaje = $"Habitación {habitacion.NumeroHabitacion} bloqueada correctamente."
+            Success = result.Success,
+            Mensaje = result.Message
         };
     }
 

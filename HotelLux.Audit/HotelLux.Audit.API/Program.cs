@@ -1,19 +1,24 @@
 using System.Text;
 using Asp.Versioning;
 using Grpc.AspNetCore.Web;
+using HotelLux.Audit.API.Consumers;
 using HotelLux.Audit.API.Extensions;
 using HotelLux.Audit.API.GrpcServices;
 using HotelLux.Shared.Hosting;
+using HotelLux.Shared.Messaging;
+using MassTransit;
 using HotelLux.Audit.DataAccess.Context;
 using HotelLux.Audit.DataAccess.Repositories;
 using HotelLux.Audit.DataAccess.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 var builder = WebApplication.CreateBuilder(args);
+builder.ConfigureHotelLuxLogging();
 
 builder.Services.AddApiVersioning(opt =>
 {
@@ -46,6 +51,20 @@ builder.Services.AddDbContext<AuditDbContext>(opts =>
     opts.UseNpgsql(builder.Configuration.GetConnectionString("AuditDb")));
 builder.Services.AddScoped<IEventoAuditoriaRepository, EventoAuditoriaRepository>();
 
+var rabbitMqSettings = builder.Configuration.GetRabbitMqSettings();
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<AuditEventConsumer>();
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.ConfigureRabbitMqHost(rabbitMqSettings);
+        cfg.ReceiveEndpoint(rabbitMqSettings.AuditQueue, e =>
+        {
+            e.ConfigureConsumer<AuditEventConsumer>(context);
+        });
+    });
+});
+
 builder.Services.AddGrpc();
 builder.Services.AddHealthChecks();
 builder.Services.AddControllers();
@@ -70,5 +89,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapGrpcService<AuditGrpcService>().EnableGrpcWeb();
 app.MapControllers();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = registration => !registration.Name.Contains("masstransit", StringComparison.OrdinalIgnoreCase)
+});
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = registration => !registration.Name.Contains("masstransit", StringComparison.OrdinalIgnoreCase)
+});
+app.MapHealthChecks("/health/ready");
 app.Run();

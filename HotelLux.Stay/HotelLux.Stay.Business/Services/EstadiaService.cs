@@ -48,9 +48,25 @@ public class EstadiaService : IEstadiaService
         }
         else
         {
-            linea = val.Lineas.FirstOrDefault();
+            linea = null;
+            foreach (var candidate in val.Lineas)
+            {
+                var activa = await _estadiaData.ObtenerActivaPorReservaHabitacionGuidAsync(
+                    candidate.ReservaHabitacionGuid,
+                    ct);
+                if (activa is null)
+                {
+                    linea = candidate;
+                    break;
+                }
+            }
+
             if (linea is null)
-                throw new ValidationException("Reserva sin líneas de habitación.", Array.Empty<string>());
+            {
+                throw new ConflictException(
+                    "Estadía",
+                    "Todas las líneas de habitación de esta reserva ya tienen check-in activo.");
+            }
         }
 
         var activaLinea = await _estadiaData.ObtenerActivaPorReservaHabitacionGuidAsync(linea.ReservaHabitacionGuid, ct);
@@ -75,6 +91,9 @@ public class EstadiaService : IEstadiaService
             HabitacionGuid = linea.HabitacionGuid,
             Estado = "ACT",
             FechaCheckinUtc = DateTimeOffset.UtcNow,
+            ObservacionesCheckin = string.IsNullOrWhiteSpace(dto.ObservacionesCheckin)
+                ? null
+                : dto.ObservacionesCheckin.Trim(),
             CreadoPorUsuario = usuario,
             EsEliminado = false,
             ServicioOrigen = "stay-service"

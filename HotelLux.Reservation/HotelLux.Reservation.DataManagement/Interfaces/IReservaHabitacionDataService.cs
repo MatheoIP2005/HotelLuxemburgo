@@ -9,4 +9,11 @@ public interface IReservaHabitacionDataService
     Task ActualizarEstadoAsync(Guid reservaHabitacionGuid, string nuevoEstado, string usuario, CancellationToken ct = default);
     Task<ReservaHabitacionDataModel> InsertarLineaAsync(int idReserva, ReservaHabitacionDataModel line, CancellationToken ct = default);
     Task<bool> EliminarLineaAsync(int idReserva, Guid reservaHabitacionGuid, CancellationToken ct = default);
+
+    Task<bool> ExisteSolapamientoConfirmadoAsync(
+        Guid habitacionGuid,
+        DateOnly fechaInicio,
+        DateOnly fechaFin,
+        Guid excludeReservaGuid,
+        CancellationToken ct = default);
 }

@@ -4,6 +4,7 @@ public class CheckInDto
 {
     public Guid ReservaGuid { get; set; }
     public Guid? ReservaHabitacionGuid { get; set; }
+    public string? ObservacionesCheckin { get; set; }
     public string? CreadoPorUsuario { get; set; }
 }
 
@@ -11,6 +12,7 @@ public class CheckInDto
 public class CheckInPorReservaBodyDto
 {
     public Guid? ReservaHabitacionGuid { get; set; }
+    public string? ObservacionesCheckin { get; set; }
 }
 
 public class CheckoutPorBodyDto
