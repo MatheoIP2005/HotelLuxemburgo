@@ -156,6 +156,42 @@ POST /api/v1/accommodations/reservas
   ]
 }
 
+{
+  "mensaje": "Reserva creada",
+  "reservaGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "codigoReserva": "string",
+  "clienteGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "sucursalGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "fechaReservaUtc": "2026-05-23T22:42:56.607Z",
+  "fechaInicio": "2026-05-23T22:42:56.607Z",
+  "fechaFin": "2026-05-23T22:42:56.607Z",
+  "subtotalReserva": 0,
+  "valorIva": 0,
+  "totalReserva": 0,
+  "saldoPendiente": 0,
+  "origenCanalReserva": "string",
+  "estadoReserva": "string",
+  "fechaConfirmacionUtc": "2026-05-23T22:42:56.607Z",
+  "fechaCancelacionUtc": "2026-05-23T22:42:56.607Z",
+  "motivoCancelacion": "string",
+  "observaciones": "string",
+  "habitaciones": [
+    {
+      "reservaHabitacionGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "habitacionGuid": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "fechaInicio": "2026-05-23T22:42:56.607Z",
+      "fechaFin": "2026-05-23T22:42:56.607Z",
+      "numAdultos": 0,
+      "numNinos": 0,
+      "precioNocheAplicado": 0,
+      "subtotalLinea": 0,
+      "valorIvaLinea": 0,
+      "totalLinea": 0,
+      "estadoDetalle": "string"
+    }
+  ]
+}
+
 GET /api/v1/accommodations/reservas/{reservaGuid}
 
 {

@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Asp.Versioning;
 using HotelLux.Reservation.API.Helpers;
 using HotelLux.Reservation.Business.DTOs.Reserva;
@@ -45,7 +47,10 @@ public class AccommodationPublicReservasController : ControllerBase
         try
         {
             var confirmed = await _service.ConfirmarAsync(created.ReservaGuid, usuario, ct);
-            return StatusCode(201, PublicReservaMapper.ToPublicReserva(confirmed));
+            var body = new JsonObject { ["mensaje"] = "Reserva creada" };
+            foreach (var prop in JsonSerializer.SerializeToNode(PublicReservaMapper.ToPublicReserva(confirmed))!.AsObject())
+                body.Add(prop.Key, prop.Value?.DeepClone());
+            return StatusCode(201, body);
         }
         catch (Exception ex)
         {

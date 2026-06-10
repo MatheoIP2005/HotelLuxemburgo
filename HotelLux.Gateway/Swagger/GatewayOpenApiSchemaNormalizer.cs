@@ -13,6 +13,8 @@ public sealed class GatewayOpenApiSchemaNormalizer
     {
         ["LoginRequestDTO"] = "LoginRequest",
         ["LoginResponseDTO"] = "LoginResponse",
+        ["LoginSuccessResponse"] = "LoginResponseApiResponse",
+        ["LoginSuccessData"] = "LoginResponse",
         ["RefreshRequestDTO"] = "RefreshTokenRequest",
         ["CambiarPasswordDTO"] = "CambiarPasswordRequest",
         ["FacturaDto"] = "FacturaResponse",
